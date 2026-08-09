@@ -1,0 +1,1560 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EngineX Calc - Edición Definitiva V11.2</title>
+    
+    <script>
+        MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']],
+                processEscapes: true,
+                processEnvironments: true
+            },
+            options: {
+                skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre'],
+                ignoreHtmlClass: 'tex2jax_ignore',
+                processHtmlClass: 'tex2jax_process'
+            },
+            startup: {
+                typeset: false
+            }
+        };
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" async></script>
+    
+    <style>
+        :root {
+            --bg-main: #0f172a;
+            --bg-card: rgba(30, 41, 59, 0.8);
+            --bg-input: #334155;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent: #6366f1;
+            --accent-hover: #4f46e5;
+            --cyan: #06b6d4;
+            --emerald: #10b981;
+            --rose: #f43f5e;
+            --border: #475569;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background-color: var(--bg-main); color: var(--text-main); min-height: 100vh; padding-bottom: 40px; transition: background-color 0.3s ease; }
+        
+        header { border-bottom: 1px solid var(--border); padding: 15px 25px; background-color: rgba(15, 23, 42, 0.5); backdrop-filter: blur(5px); }
+        .header-container { display: flex; justify-content: center; align-items: center; }
+
+        .nav-tabs { display: flex; gap: 15px; }
+        .tab-btn { background: none; border: none; color: var(--text-muted); padding: 10px 25px; font-size: 15px; font-weight: 600; cursor: pointer; border-bottom: 3px solid transparent; transition: all 0.3s ease; }
+        .tab-btn:hover { color: var(--text-main); }
+        .tab-btn.active { color: var(--cyan); border-bottom-color: var(--cyan); }
+
+        .main-container { padding: 25px; max-width: 1450px; margin: 0 auto; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        .layout-row { display: flex; flex-wrap: wrap; gap: 20px; }
+        .layout-col-left { flex: 0 0 36%; max-width: 36%; }
+        .layout-col-right { flex: 1; min-width: 0; }
+
+        .card { background-color: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); backdrop-filter: blur(10px); position: relative; }
+        .card-title { font-size: 14px; font-weight: 600; margin-bottom: 15px; color: var(--text-main); border-left: 4px solid var(--accent); padding-left: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .card-title.cyan-border { border-left-color: var(--cyan); }
+
+        .form-group { margin-bottom: 12px; }
+        .form-group label { display: block; font-size: 12px; font-weight: 500; color: var(--text-muted); margin-bottom: 6px; }
+        .input-control { width: 100%; background-color: var(--bg-input); border: 1px solid var(--border); color: var(--text-main); padding: 10px 14px; border-radius: 6px; font-size: 14px; font-family: 'Courier New', monospace; transition: border-color 0.2s; resize: vertical; }
+        .input-control:focus { outline: none; border-color: var(--cyan); }
+        
+        .btn { display: inline-block; background-color: var(--accent); color: var(--text-main); padding: 10px 20px; font-size: 14px; font-weight: 600; border: none; border-radius: 6px; cursor: pointer; transition: background-color 0.2s; text-align: center; width: 100%; }
+        .btn:hover { background-color: var(--accent-hover); }
+        .btn-cyan { background-color: var(--cyan) !important; color: #0f172a !important; }
+        .btn-cyan:hover { background-color: #069db8 !important; }
+        .btn-outline { background: none; border: 1px solid var(--border); color: var(--text-muted); }
+        .btn-outline:hover { border-color: var(--text-main); color: var(--text-main); }
+        .btn-action-small { display: inline-block; background-color: rgba(51, 65, 85, 0.8); border: 1px solid var(--border); color: var(--text-main); padding: 6px 12px; border-radius: 4px; font-size: 12px; cursor: pointer; transition: all 0.2s; }
+        .btn-action-small:hover { background-color: var(--cyan); color: #0f172a; border-color: var(--cyan); }
+
+        .settings-btn { position: fixed; right: 25px; bottom: 25px; background: var(--bg-card); border: 1px solid var(--border); color: var(--text-main); width: 45px; height: 45px; border-radius: 50%; cursor: pointer; z-index: 1000; box-shadow: 0 4px 10px rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; font-size: 20px; transition: transform 0.2s; }
+        .settings-btn:hover { transform: scale(1.1); }
+        .settings-panel { position: fixed; right: 25px; bottom: 80px; background: var(--bg-card); border: 1px solid var(--border); padding: 15px; border-radius: 8px; z-index: 1000; display: none; box-shadow: 0 8px 20px rgba(0,0,0,0.5); backdrop-filter: blur(10px); width: 200px; }
+
+        .copyright-btn { position: fixed; left: 25px; bottom: 25px; background: var(--bg-card); border: 1px solid var(--border); color: var(--text-main); width: 45px; height: 45px; border-radius: 50%; cursor: pointer; z-index: 1000; box-shadow: 0 4px 10px rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; font-size: 20px; transition: transform 0.2s; }
+        .copyright-btn:hover { transform: scale(1.1); }
+
+        .copyright-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 2000; display: none; align-items: center; justify-content: center; padding: 20px; }
+        .copyright-modal { background: var(--bg-main); border: 1px solid var(--border); border-radius: 12px; max-width: 520px; width: 100%; max-height: 85vh; overflow-y: auto; padding: 28px; box-shadow: 0 10px 40px rgba(0,0,0,0.6); }
+        .copyright-modal h2 { font-size: 16px; color: var(--cyan); border-left: 4px solid var(--cyan); padding-left: 10px; margin-bottom: 18px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .copyright-modal p { font-size: 13px; line-height: 1.7; color: var(--text-main); margin-bottom: 12px; }
+        .copyright-modal p.muted { color: var(--text-muted); font-size: 11px; }
+        .copyright-modal strong { color: var(--emerald); }
+        .copyright-modal .btn { margin-top: 10px; }
+
+        /* LaTeX Render Box */
+        .latex-rendered { 
+            background-color: rgba(11, 19, 34, 0.7); 
+            border: 1px solid rgba(6, 182, 212, 0.2); 
+            border-radius: 6px; 
+            padding: 20px; 
+            margin-top: 5px; 
+            min-height: 60px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            font-size: 18px; 
+            color: #e2e8f0;
+            overflow-x: auto;
+            overflow-y: hidden;
+        }
+
+        /* Scientific Keyboard */
+        .scientific-keyboard { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; background-color: rgba(17, 24, 39, 0.8); padding: 12px; border-radius: 8px; border: 1px solid var(--border); margin-top: 10px; }
+        .key-btn { background-color: #1f2937; border: 1px solid #374151; color: #f3f4f6; padding: 10px 4px; font-size: 13px; font-weight: 600; border-radius: 4px; cursor: pointer; text-align: center; user-select: none; transition: all 0.15s; }
+        .key-btn:hover { background-color: #374151; border-color: #4b5563; }
+        .key-btn.key-op { color: var(--cyan); background-color: #14213d; }
+        .key-btn.key-fn { color: #f43f5e; font-style: italic; background-color: #241420; }
+        .key-btn.key-clear { background-color: #4c1d95; color: #ddd6fe; }
+        .key-btn.key-clear:hover { background-color: #5b21b6; }
+        .key-btn.key-action { background-color: #065f46; color: #a7f3d0; }
+        .key-btn.key-prefix { background-color: #0f172a; color: #f59e0b; border-color: #1e293b; }
+        .key-btn.key-prefix:hover { background-color: #1e293b; color: #fbbf24; }
+        .key-btn.key-prefix-small { background-color: #0f172a; color: #06b6d4; border-color: #1e293b; }
+        .key-btn.key-prefix-small:hover { background-color: #1e293b; color: #22d3ee; }
+
+        /* Accordion Library */
+        .eq-list { max-height: 320px; overflow-y: auto; margin-top: 10px; }
+        .eq-list::-webkit-scrollbar { width: 6px; }
+        .eq-list::-webkit-scrollbar-thumb { background-color: var(--border); border-radius: 4px; }
+        
+        details.group-details { margin-bottom: 8px; border: 1px solid var(--border); border-radius: 6px; background-color: rgba(21, 31, 50, 0.7); overflow: hidden; }
+        details.group-details > summary { padding: 12px 15px; font-weight: 600; font-size: 13px; color: var(--cyan); cursor: pointer; background-color: rgba(6, 182, 212, 0.05); user-select: none; }
+        details.group-details > summary:hover { background-color: rgba(6, 182, 212, 0.1); }
+        
+        .eq-item { padding: 12px 15px; border-top: 1px solid var(--border); cursor: pointer; transition: background-color 0.2s; position: relative; background-color: transparent; }
+        .eq-item:hover { background-color: rgba(51, 65, 85, 0.5); }
+        .eq-item.selected { background-color: rgba(99, 102, 241, 0.2); border-left: 3px solid var(--accent); }
+        .eq-item-name { font-weight: 600; font-size: 13px; color: var(--text-main); margin-bottom: 4px; }
+        .eq-item-latex { font-size: 11px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; padding-right: 40px; }
+        
+        .badge { font-size: 9px; border-radius: 3px; padding: 2px 4px; margin-right: 5px; font-weight: bold; vertical-align: middle; }
+        .badge-sys { color: var(--cyan); border: 1px solid var(--cyan); }
+        .badge-usr { color: var(--accent); border: 1px solid var(--accent); }
+        .delete-eq-btn { position: absolute; right: 15px; top: 12px; background: none; border: none; color: var(--rose); cursor: pointer; font-size: 11px; opacity: 0.6; }
+        .delete-eq-btn:hover { opacity: 1; }
+
+        /* Parameters Table */
+        .param-table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        .param-table th, .param-table td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--border); font-size: 13px; }
+        .param-table th { color: var(--text-muted); font-weight: 600; text-transform: uppercase; font-size: 11px; }
+        .radio-label { display: inline-flex; align-items: center; cursor: pointer; color: var(--text-main); }
+        .radio-label input { margin-right: 6px; accent-color: var(--cyan); }
+
+        .result-box { margin-top: 20px; padding: 15px; border-radius: 8px; background-color: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); text-align: center; }
+        .result-box.error { background-color: rgba(244, 63, 94, 0.1); border: 1px solid rgba(244, 63, 94, 0.3); }
+        .result-title { font-size: 12px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 5px; }
+        .result-value { font-size: 24px; font-weight: 700; font-family: 'Courier New', monospace; color: var(--emerald); }
+
+        /* Comentarios Zone */
+        #solver-comment-zone {
+            margin-top: 20px;
+            background-color: rgba(16, 185, 129, 0.05);
+            border-left: 4px solid var(--emerald);
+            padding: 15px;
+            border-radius: 0 8px 8px 0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        #solver-comment-text {
+            font-size: 13px;
+            color: var(--text-muted);
+            line-height: 1.5;
+            white-space: pre-wrap; 
+        }
+
+        /* Canvas Workspace */
+        .canvas-container { position: relative; width: 100%; background-color: #0b0f19; border-radius: 8px; border: 1px solid var(--border); overflow: hidden; height: 520px; cursor: grab; }
+        .canvas-container:active { cursor: grabbing; }
+        canvas { display: block; width: 100%; height: 100%; }
+        .graph-controls { display: flex; gap: 10px; margin-top: 12px; }
+        .graph-control-col { flex: 1; }
+        .coords-overlay { position: absolute; top: 15px; right: 15px; background-color: rgba(15, 23, 42, 0.9); border: 1px solid var(--border); padding: 8px 12px; border-radius: 4px; font-family: 'Courier New', monospace; font-size: 12px; color: var(--cyan); pointer-events: none; display: none; z-index: 10; }
+
+        .graph-input-info {
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-top: 8px;
+            padding: 8px;
+            background: rgba(6, 182, 212, 0.05);
+            border-radius: 4px;
+            border-left: 3px solid var(--cyan);
+        }
+
+        /* Memory Item Styles */
+        .memory-item { display: flex; align-items: center; justify-content: space-between; background: rgba(0,0,0,0.25); padding: 10px 15px; border-radius: 6px; border: 1px solid var(--border); margin-bottom: 8px; }
+        .memory-item input { background: transparent; border: 1px solid transparent; color: var(--text-main); font-weight: bold; width: 120px; padding: 4px; font-size: 14px; transition: border 0.2s; }
+        .memory-item input:focus { border-bottom: 1px solid var(--cyan); outline: none; }
+
+        @media (max-width: 1024px) {
+            .layout-col-left { flex: 0 0 100%; max-width: 100%; }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="header-container">
+            <div class="nav-tabs">
+                <button class="tab-btn active" onclick="switchTab('cientifica')">Ecuaciones & Despejador</button>
+                <button class="tab-btn" onclick="switchTab('grafica')">Graficadora Interactiva 2D</button>
+            </div>
+        </div>
+    </header>
+
+    <button class="settings-btn" onclick="toggleSettings()" title="Configuración de Color">&#9881;</button>
+    <div class="settings-panel" id="settings-panel">
+        <label style="font-size: 12px; font-weight:bold; color: var(--text-muted); display: block; margin-bottom: 8px; text-transform:uppercase;">Color de Fondo</label>
+        <input type="color" id="bg-color-picker" value="#0f172a" oninput="updateThemeColor(this.value)" style="width: 100%; height: 40px; cursor: pointer; border: none; border-radius:4px; padding:0;">
+        <button class="btn btn-outline" style="margin-top:10px; padding:5px;" onclick="updateThemeColor('#0f172a'); document.getElementById('bg-color-picker').value='#0f172a';">Original</button>
+    </div>
+
+    <button class="copyright-btn" onclick="toggleCopyrightModal(true)" title="Licencia y Créditos">&copy;</button>
+    <div class="copyright-modal-overlay" id="copyright-modal-overlay" onclick="if(event.target===this) toggleCopyrightModal(false)">
+        <div class="copyright-modal">
+            <h2>Licencia de Uso</h2>
+            <p><strong>EngineX Calc</strong> — Idea, diseño, estructura, biblioteca de ecuaciones y algoritmos de despeje son obra original de:</p>
+            <p style="font-size: 18px; text-align:center; color: var(--cyan); font-weight:700; margin: 18px 0;">Agustín Diano</p>
+            <p>&copy; <span id="copyright-year"></span> Agustín Diano. Distribuido bajo licencia <strong>Creative Commons Atribución-NoComercial-CompartirIgual 4.0 Internacional (CC BY-NC-SA 4.0)</strong>.</p>
+            <p><strong>Permitido:</strong> usar, copiar, estudiar y modificar libremente esta aplicación, siempre dando crédito a Agustín Diano como autor original de la idea.</p>
+            <p><strong>Prohibido:</strong> vender esta aplicación o cualquier versión modificada de ella, o darle cualquier uso comercial (cobrar por su acceso, uso o distribución).</p>
+            <p><strong>Si publicás una versión modificada:</strong> debe seguir siendo gratuita, mantener el crédito al autor original y compartirse bajo esta misma licencia (CC BY-NC-SA 4.0).</p>
+            <p class="muted">Texto legal completo de la licencia: <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/deed.es" target="_blank" rel="noopener" style="color: var(--cyan);">creativecommons.org/licenses/by-nc-sa/4.0</a>. Como este proyecto no está en un repositorio con archivo LICENSE, este aviso dentro de la propia app deja constancia de los términos, pero no reemplaza un registro formal de propiedad intelectual si en algún momento lo necesitás.</p>
+            <button class="btn btn-outline" onclick="toggleCopyrightModal(false)">Cerrar</button>
+        </div>
+    </div>
+
+    <div class="main-container">
+        
+        <div id="tab-cientifica" class="tab-content active">
+            <div class="layout-row">
+                
+                <div class="layout-col-left">
+                    <div class="card" id="config-eq-card">
+                        <div class="card-title" id="config-eq-title">Configurar Nueva Ecuación</div>
+                        <div class="form-group">
+                            <label for="eq-group">Grupo / Categoría</label>
+                            <input type="text" id="eq-group" class="input-control" list="group-datalist" placeholder="Ej: Mis Fórmulas, Transformadas...">
+                            <datalist id="group-datalist"></datalist>
+                        </div>
+                        <div class="form-group">
+                            <label for="eq-name">Nombre de la Ecuación</label>
+                            <input type="text" id="eq-name" class="input-control" placeholder="Ej: Frecuencia de Corte">
+                        </div>
+                        <div class="form-group">
+                            <label for="eq-formula">Fórmula LaTeX (usa $$ para display o $ para inline)</label>
+                            <input type="text" id="eq-formula" class="input-control" placeholder="Ej: $$c = \sqrt{a^2 + b^2}$$" oninput="liveRenderLatex('eq-formula', 'custom-render-area')">
+                            <div class="latex-rendered" id="custom-render-area">Esperando expresión LaTeX...</div>
+                        </div>
+                        <div class="form-group">
+                            <label for="eq-comment">Comentarios / Notas (Opcional)</label>
+                            <textarea id="eq-comment" class="input-control" rows="2" placeholder="Agrega notas de ayuda, contexto o tips de esta fórmula..."></textarea>
+                        </div>
+                        
+                        <div style="display: flex; flex-direction: column; gap: 10px;">
+                            <button id="btn-save-eq" class="btn btn-cyan" onclick="saveEquation()">Guardar en la Biblioteca</button>
+                            <button id="btn-cancel-edit" class="btn btn-outline" style="display: none;" onclick="cancelEdit()">Cancelar Edición</button>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-title" style="border-left-color: var(--cyan);">Teclado Científico Integrado</div>
+                        
+                        <div class="scientific-keyboard">
+                            <div class="key-btn key-fn" onclick="insertLatex('\\sin(')">sin</div>
+                            <div class="key-btn key-fn" onclick="insertLatex('\\cos(')">cos</div>
+                            <div class="key-btn key-fn" onclick="insertLatex('\\tan(')">tan</div>
+                            <div class="key-btn key-fn" onclick="insertLatex('\\sqrt{}', 1)">√</div>
+                            <div class="key-btn key-fn" onclick="insertLatex('\\exp(')">exp</div>
+                            <div class="key-btn key-op" onclick="insertLatex('^{2}')">x²</div>
+                            
+                            <div class="key-btn key-fn" onclick="insertLatex('\\ln(')">ln</div>
+                            <div class="key-btn key-fn" onclick="insertLatex('\\log_{10}(')">log</div>
+                            <div class="key-btn key-op" onclick="insertLatex('^{}', 1)">xʸ</div>
+                            <div class="key-btn key-op" onclick="insertLatex('(')">(</div>
+                            <div class="key-btn key-op" onclick="insertLatex(')')">)</div>
+                            <div class="key-btn key-op" onclick="insertLatex('\\frac{}{}', 3)">÷</div>
+                            
+                            <div class="key-btn" onclick="insertLatex('7')">7</div>
+                            <div class="key-btn" onclick="insertLatex('8')">8</div>
+                            <div class="key-btn" onclick="insertLatex('9')">9</div>
+                            <div class="key-btn key-op" onclick="insertLatex('\\cdot')">×</div>
+                            <div class="key-btn key-op" onclick="insertLatex('\\pi')">π</div>
+                            <div class="key-btn key-clear" onclick="backspaceLatex()">⌫</div>
+                            
+                            <div class="key-btn" onclick="insertLatex('4')">4</div>
+                            <div class="key-btn" onclick="insertLatex('5')">5</div>
+                            <div class="key-btn" onclick="insertLatex('6')">6</div>
+                            <div class="key-btn key-op" onclick="insertLatex('-')">-</div>
+                            <div class="key-btn key-op" onclick="insertLatex('\\lambda')">λ</div>
+                            <div class="key-btn key-clear" onclick="clearInput()">C</div>
+                            
+                            <div class="key-btn" onclick="insertLatex('1')">1</div>
+                            <div class="key-btn" onclick="insertLatex('2')">2</div>
+                            <div class="key-btn" onclick="insertLatex('3')">3</div>
+                            <div class="key-btn key-op" onclick="insertLatex('+')">+</div>
+                            <div class="key-btn key-op" style="grid-column: span 2; background-color:#1e3a8a; color:white; border-color:#2563eb;" onclick="insertLatex('\\times 10^{}', 1)">×10^( )</div>
+                            
+                            <div class="key-btn" onclick="insertLatex('0')">0</div>
+                            <div class="key-btn" onclick="insertLatex('.')">.</div>
+                            <div class="key-btn" onclick="insertLatex('e')">e</div>
+                            <div class="key-btn key-op" onclick="insertLatex('=')">=</div>
+                            <div class="key-btn key-action" style="grid-column: span 2;" onclick="triggerActiveSubmit()">Calcular</div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-title">Biblioteca de Ecuaciones</div>
+                        
+                        <div class="form-group" style="margin-bottom: 12px;">
+                            <input type="text" id="eq-search" class="input-control" placeholder="🔍 Buscar por nombre de ecuación..." oninput="renderEquationList()">
+                        </div>
+
+                        <div class="eq-list" id="equations-container"></div>
+                    </div>
+                </div>
+
+                <div class="layout-col-right">
+                    <div class="card" style="min-height: 580px;">
+                        
+                        <div id="solver-header" style="display: none; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
+                            <div class="card-title cyan-border" id="solver-title" style="margin-bottom: 0;">Selecciona una ecuación</div>
+                            <button class="btn-action-small" onclick="editCurrentEquation()" title="Modificar esta ecuación">✏️ Editar Ecuación</button>
+                        </div>
+                        <div class="card-title cyan-border" id="solver-title-placeholder">Selecciona una ecuación de la biblioteca</div>
+                        
+                        <div id="selected-eq-latex-box" style="display:none; margin-bottom: 20px;">
+                            <div class="latex-rendered" id="global-latex-render" style="background-color: rgba(19, 29, 49, 0.8); font-size: 24px; padding: 25px;"></div>
+                        </div>
+
+                        <div id="solver-body" style="display: none;">
+                            <table class="param-table">
+                               <thead>
+                                   <tr>
+                                       <th style="width: 20%;">Variable</th>
+                                       <th style="width: 30%;">Despejar</th>
+                                       <th style="width: 50%;">Valor Ingresado (Parámetro)</th>
+                                   </tr>
+                               </thead>
+                               <tbody id="params-table-body"></tbody>
+                            </table>
+
+                            <div id="solved-formula-box" style="margin-top: 20px; display: none;">
+                                <div class="card-title" style="font-size: 12px; border-left-color: var(--emerald);">🧮 Ecuación Despejada (Simbólico)</div>
+                                <div class="latex-rendered" id="solved-formula-render" style="background-color: rgba(16, 185, 129, 0.05); border-color: rgba(16, 185, 129, 0.25); font-size: 20px; padding: 18px;"></div>
+                            </div>
+                            <div id="solved-formula-unavailable" style="margin-top: 12px; display: none; font-size: 12px; color: var(--text-muted); padding: 10px 12px; background: rgba(148, 163, 184, 0.08); border-radius: 6px; border-left: 3px solid var(--border);">
+                                ⚠ No se pudo despejar esta variable simbólicamente (aparece más de una vez en la fórmula). El resultado numérico sigue siendo válido.
+                            </div>
+
+                            <div style="margin-top: 25px;">
+                                <button class="btn btn-cyan" onclick="executeSolve()">Despejar Variable y Calcular</button>
+                            </div>
+
+                            <div id="solver-comment-zone" style="display: none;">
+                                <div style="font-size: 12px; font-weight: bold; color: var(--emerald); margin-bottom: 6px; text-transform: uppercase;">📝 Notas y Comentarios</div>
+                                <div id="solver-comment-text"></div>
+                            </div>
+
+                            <div id="solver-result-zone" style="display: none;">
+                                <div id="solver-results-container"></div>
+                            </div>
+                        </div>
+                        <div id="solver-placeholder" style="text-align: center; padding-top: 120px; color: var(--text-muted);">
+                            <p>Explora la biblioteca a la izquierda para cargar una ecuación.</p>
+                        </div>
+                    </div>
+
+                    <div class="card" style="background-color: rgba(15, 23, 42, 0.6);">
+                        <div class="card-title" style="border-left-color: var(--emerald);">📦 Variables</div>
+                        <div id="memory-list">
+                            <p style="color: var(--text-muted); font-size: 13px; text-align: center; padding: 15px;">No hay variables guardadas. Calcula un valor arriba y presiona "Guardar".</p>
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+        </div>
+
+        <div id="tab-grafica" class="tab-content">
+            <div class="layout-row">
+                
+                <div class="layout-col-left">
+                    <div class="card">
+                        <div class="card-title">Funciones a Graficar</div>
+                        <div class="form-group">
+                            <label for="graph-f1">Función f(x) - Notación de Cálculo</label>
+                            <input type="text" id="graph-f1" class="input-control" value="sin(2*PI*x) * exp(-0.5*x)" oninput="handleGraphInputChange('graph-f1', 'f1-render')">
+                            <div class="latex-rendered" id="f1-render" style="min-height: 40px; font-size: 16px;"></div>
+                            <div class="graph-input-info">
+                                <strong>Notación:</strong> Usa <code>exp(x)</code> para e<sup>x</sup>, <code>**</code> para potencias, <code>PI</code> para π, <code>*</code> para multiplicación
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="graph-f2">Función g(x) [Opcional]</label>
+                            <input type="text" id="graph-f2" class="input-control" value="exp(-0.5*x)" oninput="handleGraphInputChange('graph-f2', 'f2-render')">
+                            <div class="latex-rendered" id="f2-render" style="min-height: 40px; font-size: 16px;"></div>
+                        </div>
+                        <button class="btn btn-cyan" onclick="plot()">Renderizar Gráfica</button>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-title">Límites de Visualización</div>
+                        <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 10px;">Puedes usar la <b>rueda del ratón</b> para hacer zoom y <b>hacer clic y arrastrar</b> sobre el gráfico para moverte.</p>
+                        <div class="graph-controls">
+                            <div class="graph-control-col">
+                                <label style="font-size:11px; color:var(--text-muted);">X Min</label>
+                                <input type="number" id="xlim-min" class="input-control" value="0" step="any" onchange="plot()">
+                            </div>
+                            <div class="graph-control-col">
+                                <label style="font-size:11px; color:var(--text-muted);">X Max</label>
+                                <input type="number" id="xlim-max" class="input-control" value="10" step="any" onchange="plot()">
+                            </div>
+                        </div>
+                        <div class="graph-controls" style="margin-top: 10px;">
+                            <div class="graph-control-col">
+                                <label style="font-size:11px; color:var(--text-muted);">Y Min</label>
+                                <input type="number" id="ylim-min" class="input-control" value="-1" step="any" onchange="plot()">
+                            </div>
+                            <div class="graph-control-col">
+                                <label style="font-size:11px; color:var(--text-muted);">Y Max</label>
+                                <input type="number" id="ylim-max" class="input-control" value="1" step="any" onchange="plot()">
+                            </div>
+                        </div>
+                        <div style="margin-top:15px;">
+                            <button class="btn btn-outline" onclick="resetGraphLimits()">Restablecer Zoom y Posición</button>
+                        </div>
+                    </div>
+
+                    <div class="card" style="background-color: rgba(6, 182, 212, 0.05); border-color: rgba(6, 182, 212, 0.3);">
+                        <div class="card-title" style="border-left-color: var(--cyan);">(X, Y)</div>
+                        <div class="graph-controls" style="align-items: center;">
+                            <div class="graph-control-col" style="flex: 0 0 35%;">
+                                <label style="font-size:11px; color:var(--text-muted); font-weight:bold;">Entrada: X =</label>
+                                <input type="number" id="graph-eval-x" class="input-control" value="1" step="any" oninput="evaluateGraphX()" style="border-color: var(--cyan);">
+                            </div>
+                            <div class="graph-control-col" style="background: rgba(15, 23, 42, 0.5); padding: 12px; border-radius: 6px; border: 1px solid var(--border);">
+                                <div style="font-size: 13px; color: var(--cyan); display:flex; justify-content: space-between;">
+                                    <span>f(x) =</span> 
+                                    <span id="eval-f1-out" style="font-family: monospace; color: var(--text-main); font-weight: bold;">--</span>
+                                </div>
+                                <div style="font-size: 13px; color: var(--rose); margin-top: 8px; display:flex; justify-content: space-between;">
+                                    <span>g(x) =</span> 
+                                    <span id="eval-f2-out" style="font-family: monospace; color: var(--text-main); font-weight: bold;">--</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <div class="layout-col-right">
+                    <div class="canvas-container" id="canvas-wrapper-box">
+                        <canvas id="graphCanvas" width="900" height="520"></canvas>
+                        <div class="coords-overlay" id="coordsOverlay">X: 0.00, Y: 0.00</div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // System Preset Library Template
+        const defaultSystemLibrary = {
+            "Análisis de Circuitos": [
+                { name: "Ley de Ohm", formula: "$$V = I \\cdot R$$", solveFormula: "V = I * R", comment: "Relación fundamental básica entre el voltaje (V), la corriente (I) y la resistencia (R) en un circuito ideal." },
+                { name: "Divisor de Voltaje", formula: "$$V_{out} = \\frac{V_{in} \\cdot R_2}{R_1 + R_2}$$", solveFormula: "Vout = (Vin * R2) / (R1 + R2)" },
+                { name: "Divisor de Corriente", formula: "$$I_{R1} = \\frac{I_{total} \\cdot R_2}{R_1 + R_2}$$", solveFormula: "Ir1 = (Itotal * R2) / (R1 + R2)" },
+                { name: "Reactancia Capacitiva (AC)", formula: "$$X_C = \\frac{1}{2\\pi f C}$$", solveFormula: "Xc = 1 / (2 * PI * f * C)", comment: "Recuerda que la unidad del capacitor 'C' debe estar en Faradios (no en microfaradios, usa notación científica si es necesario)." },
+                { name: "Reactancia Inductiva (AC)", formula: "$$X_L = 2\\pi f L$$", solveFormula: "Xl = 2 * PI * f * L" }
+            ],
+            "Señales y Sistemas (LTI)": [
+                { name: "Frecuencia Angular", formula: "$$\\omega = 2\\pi f$$", solveFormula: "w = 2 * PI * f", comment: "Transforma la frecuencia lineal (Hz) a frecuencia angular en radianes por segundo." },
+                { name: "Frecuencia de Corte (Filtro RC)", formula: "$$f_c = \\frac{1}{2\\pi R C}$$", solveFormula: "fc = 1 / (2 * PI * R * C)" },
+                { name: "Longitud de Onda", formula: "$$\\lambda = \\frac{c}{f}$$", solveFormula: "lambda = c / f", comment: "Para ondas electromagnéticas en el vacío, ingresa c como 3e8 (velocidad de la luz)." },
+                { name: "Energía de Pulso Constante", formula: "$$E = P \\cdot t$$", solveFormula: "E = P * t" }
+            ],
+            "Electrónica y Dispositivos": [
+                { name: "Diodo - Ecuación de Shockley", formula: "$$I_D = I_S \\left(e^{\\frac{V_D}{n V_T}} - 1\\right)$$", solveFormula: "Id = Is * (exp(Vd / (n * Vt)) - 1)" },
+                { name: "BJT - Corriente de Colector", formula: "$$I_C = I_S \\cdot e^{\\frac{V_{BE}}{V_T}}$$", solveFormula: "Ic = Is * exp(Vbe / Vt)" },
+                { name: "BJT - Relación Beta/Alfa", formula: "$$\\beta = \\frac{\\alpha}{1 - \\alpha}$$", solveFormula: "Beta = Alfa / (1 - Alfa)" },
+                { name: "MOSFET N - Saturación", formula: "$$I_D = \\frac{1}{2} K_n (V_{GS} - V_{th})^2 (1 + \\lambda V_{DS})$$", solveFormula: "Id = 0.5 * Kn * (Vgs - Vth)**2 * (1 + Lambda * Vds)" },
+                { name: "MOSFET N - Óhmica/Triodo", formula: "$$I_D = K_n \\left[(V_{GS} - V_{th})V_{DS} - \\frac{1}{2}V_{DS}^2\\right]$$", solveFormula: "Id = Kn * ((Vgs - Vth) * Vds - 0.5 * Vds**2)" }
+            ],
+            "Matemáticas y Geometría": [
+                { name: "Teorema de Pitágoras", formula: "$$c = \\sqrt{a^2 + b^2}$$", solveFormula: "c = sqrt(a**2 + b**2)" },
+                { name: "Ecuación Cuadrática", formula: "$$x = \\frac{-b + \\sqrt{b^2 - 4ac}}{2a}$$", solveFormula: "x = (-b + sqrt(b**2 - 4*a*c)) / (2*a)", comment: "Atención: Esta fórmula calcula matemáticamente solo una de las raíces (+). Para la raíz negativa, edita la fórmula manualmente y guárdala como copia." },
+                { name: "Logaritmo Base 10", formula: "$$y = \\frac{\\log(x)}{\\log(10)}$$", solveFormula: "y = log(x) / log(10)" }
+            ]
+        };
+
+        // Current App State Variables
+        let systemLibrary = {};
+        let customEquations = [];
+        let currentSelectedEq = null;
+        let lastFocusedInput = null;
+        
+        // Memory Variables
+        let savedVariables = [];
+        let lastCalculatedRoots = [];
+        let lastCalculatedName = "";
+
+        // Editing State
+        let editingEqId = null;
+        let editingEqIsCustom = false;
+        let editingOldGroup = "";
+
+        window.onload = function() {
+            document.addEventListener('focusin', function(e) {
+                if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+                    lastFocusedInput = e.target;
+                }
+            });
+            loadLibraries();
+            initGraph();
+            handleGraphInputChange('graph-f1', 'f1-render');
+            handleGraphInputChange('graph-f2', 'f2-render');
+            document.getElementById('copyright-year').innerText = new Date().getFullYear();
+        };
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+            document.getElementById('tab-' + tabId).classList.add('active');
+            event.currentTarget.classList.add('active');
+            if(tabId === 'grafica') { setTimeout(plot, 30); evaluateGraphX(); }
+        }
+
+        function toggleSettings() {
+            const panel = document.getElementById('settings-panel');
+            panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+        }
+
+        function toggleCopyrightModal(show) {
+            document.getElementById('copyright-modal-overlay').style.display = show ? 'flex' : 'none';
+        }
+
+        function updateThemeColor(color) {
+            document.documentElement.style.setProperty('--bg-main', color);
+            document.documentElement.style.setProperty('--bg-card', color + 'e6');
+        }
+
+        // --- COMPUTATIONAL TO LATEX CONVERTER FOR GRAPHING ---
+        // Convierte notación computacional (la misma que usan los campos f(x)/g(x) de la
+        // graficadora, ej. "sin(2*PI*x) * exp(-0.5*x)") a LaTeX para la vista previa.
+        // Reutiliza el mismo parser/impresor del motor de despeje simbólico en vez de un
+        // reemplazo por regex encadenado: el converter anterior encadenaba
+        // .replace(/\bPI\b/,'\\pi').replace(/\bpi\b/,'\\pi') y el segundo reemplazo volvía a
+        // matchear la "pi" recién insertada (el "\b" ve un límite de palabra justo después de
+        // la barra invertida), duplicando la barra a "\\pi" — que MathJax interpreta como el
+        // comando de salto de línea "\\" seguido del texto literal "pi", no como el símbolo π.
+        // Parsear a un árbol real y volver a imprimirlo evita ese tipo de colisión por completo.
+        function convertComputationalToLatex(expression) {
+            if (!expression) return '';
+            const trimmed = expression.trim();
+            if (!trimmed) return '';
+            if (trimmed.includes('$$') || trimmed.includes('\\')) return trimmed;
+            try {
+                const ast = parseExprTokens(tokenizeExpr(trimmed));
+                return '$$f(x) = ' + astToSymbolicLatex(ast, 0) + '$$';
+            } catch (e) {
+                return trimmed;
+            }
+        }
+
+        // --- LATEX INPUT FUNCTIONS ---
+        function getActiveInput() {
+            if (!lastFocusedInput) lastFocusedInput = document.getElementById('eq-formula');
+            return lastFocusedInput;
+        }
+
+        function insertLatex(text, cursorOffsetFromEnd) {
+            const input = getActiveInput();
+            const start = input.selectionStart || 0;
+            const end = input.selectionEnd || 0;
+            input.value = input.value.substring(0, start) + text + input.value.substring(end);
+            const insertedEnd = start + text.length;
+            input.selectionStart = input.selectionEnd = cursorOffsetFromEnd ? (insertedEnd - cursorOffsetFromEnd) : insertedEnd;
+            input.focus();
+            if (input.id === 'eq-formula') liveRenderLatex('eq-formula', 'custom-render-area');
+            if (input.id === 'graph-f1') handleGraphInputChange('graph-f1', 'f1-render');
+            if (input.id === 'graph-f2') handleGraphInputChange('graph-f2', 'f2-render');
+        }
+
+        function backspaceLatex() {
+            const input = getActiveInput();
+            const start = input.selectionStart || 0, end = input.selectionEnd || 0;
+            if (start === end && start > 0) {
+                input.value = input.value.substring(0, start - 1) + input.value.substring(end);
+                input.selectionStart = input.selectionEnd = start - 1;
+            } else if (start !== end) {
+                input.value = input.value.substring(0, start) + input.value.substring(end);
+                input.selectionStart = input.selectionEnd = start;
+            }
+            input.focus();
+            if (input.id === 'eq-formula') liveRenderLatex('eq-formula', 'custom-render-area');
+            if (input.id === 'graph-f1') handleGraphInputChange('graph-f1', 'f1-render');
+            if (input.id === 'graph-f2') handleGraphInputChange('graph-f2', 'f2-render');
+        }
+
+        function clearInput() {
+            const input = getActiveInput();
+            input.value = '';
+            input.focus();
+            if (input.id === 'eq-formula') liveRenderLatex('eq-formula', 'custom-render-area');
+            if (input.id === 'graph-f1') handleGraphInputChange('graph-f1', 'f1-render');
+            if (input.id === 'graph-f2') handleGraphInputChange('graph-f2', 'f2-render');
+        }
+
+        function triggerActiveSubmit() {
+            if (lastFocusedInput && (lastFocusedInput.id === 'graph-f1' || lastFocusedInput.id === 'graph-f2')) { plot(); } 
+            else if (currentSelectedEq) { executeSolve(); }
+        }
+
+        // --- GRAPH EVALUATION HELPERS ---
+        function handleGraphInputChange(inputId, outputId) {
+            liveRenderGraphFunction(inputId, outputId);
+            evaluateGraphX();
+        }
+
+        function liveRenderGraphFunction(inputId, outputId) {
+            const raw = document.getElementById(inputId).value;
+            renderLatexPreview(raw, outputId, { computational: true, emptyMessage: 'f(x) = ...' });
+        }
+
+        // --- CORE LATEX RENDERING ENGINE ---
+        // Centraliza el renderizado con MathJax: espera a que MathJax termine de cargar
+        // (el script se carga con "async", así que puede no estar listo en el primer render),
+        // aplica debounce para no saturar MathJax mientras el usuario escribe, y limpia el
+        // estado anterior con typesetClear antes de cada re-render (evita que fórmulas con
+        // fracciones/raíces/potencias anidadas queden en un estado corrupto tras varias ediciones).
+        let mathJaxReadyPromise = null;
+        function whenMathJaxReady() {
+            if (mathJaxReadyPromise) return mathJaxReadyPromise;
+            mathJaxReadyPromise = new Promise((resolve) => {
+                const check = () => {
+                    if (window.MathJax && window.MathJax.startup && window.MathJax.startup.promise) {
+                        window.MathJax.startup.promise.then(resolve);
+                    } else {
+                        setTimeout(check, 50);
+                    }
+                };
+                check();
+            });
+            return mathJaxReadyPromise;
+        }
+
+        const renderDebounceTimers = {};
+        function renderLatexPreview(rawText, outputId, options = {}) {
+            if (renderDebounceTimers[outputId]) clearTimeout(renderDebounceTimers[outputId]);
+            renderDebounceTimers[outputId] = setTimeout(() => {
+                doRenderLatex(rawText, outputId, options);
+            }, 150);
+        }
+
+        function doRenderLatex(rawText, outputId, options) {
+            const output = document.getElementById(outputId);
+            if (!output) return;
+            const text = (rawText || '').trim();
+            const emptyMsg = options.emptyMessage !== undefined ? options.emptyMessage : 'Esperando expresión LaTeX...';
+
+            if (!text) { output.innerHTML = `<span style="color: var(--text-muted);">${emptyMsg}</span>`; return; }
+
+            let toRender;
+            if (options.computational) {
+                toRender = convertComputationalToLatex(text);
+            } else {
+                toRender = (text.includes('$')) ? text : ('$$' + text + '$$');
+            }
+            output.innerHTML = toRender;
+
+            whenMathJaxReady().then(() => {
+                // El input pudo haber cambiado mientras esperábamos a MathJax; no pisar contenido nuevo.
+                if (document.getElementById(outputId) !== output) return;
+                try { MathJax.typesetClear([output]); } catch (e) {}
+                MathJax.typesetPromise([output]).catch(() => {
+                    output.innerHTML = `<div style="color: var(--rose); font-size: 12px; font-family: 'Courier New', monospace; text-align:left; width:100%;">⚠ Expresión LaTeX incompleta o inválida (revisa llaves { } sin cerrar):<br><span style="opacity:0.8;">${text.replace(/</g,'&lt;')}</span></div>`;
+                });
+            });
+        }
+
+        function liveRenderLatex(inputId, outputId) {
+            const raw = document.getElementById(inputId).value;
+            renderLatexPreview(raw, outputId, { emptyMessage: 'Esperando expresión LaTeX...' });
+        }
+
+        function evaluateGraphX() {
+            const xValStr = document.getElementById('graph-eval-x').value;
+            const xVal = parseFloat(xValStr);
+            const outF1 = document.getElementById('eval-f1-out');
+            const outF2 = document.getElementById('eval-f2-out');
+            
+            if(isNaN(xVal) || xValStr.trim() === "") {
+                outF1.innerText = "--";
+                outF2.innerText = "--";
+                return;
+            }
+
+            const evaluateFormula = (expr) => {
+                if(!expr) return "--";
+                try {
+                    let fn = new Function('x', 'PI', 'pi', 'E', 'e', 'w', 'omega', 'Omega', `with(Math) { return ${expr}; }`);
+                    let res = fn(xVal, Math.PI, Math.PI, Math.E, Math.E, 1, 1, 1);
+                    if(isNaN(res) || !isFinite(res)) return "Indefinido";
+                    // Formateo elegante: exponencial si es muy grande/pequeño, de lo contrario max 6 decimales.
+                    let absRes = Math.abs(res);
+                    if (absRes !== 0 && (absRes < 1e-4 || absRes > 1e6)) {
+                        return res.toExponential(4);
+                    }
+                    return res.toFixed(6).replace(/\.?0+$/, "");
+                } catch(e) { return "Error sintaxis"; }
+            };
+
+            const f1Expr = document.getElementById('graph-f1').value.trim();
+            const f2Expr = document.getElementById('graph-f2').value.trim();
+
+            outF1.innerText = evaluateFormula(f1Expr);
+            outF2.innerText = evaluateFormula(f2Expr);
+        }
+
+        // --- EQUATIONS DATA MGT & LOCAL STORAGE ---
+        function loadLibraries() {
+            const storedSys = localStorage.getItem('enginex_v11_sys_lib');
+            if (storedSys) { try { systemLibrary = JSON.parse(storedSys); } catch(e) { initSystemLibrary(); } } 
+            else { initSystemLibrary(); }
+
+            const storedUsr = localStorage.getItem('enginex_v11_usr_lib');
+            if (storedUsr) { try { customEquations = JSON.parse(storedUsr); } catch(e) { customEquations = []; } }
+
+            renderEquationList(); 
+            updateGroupDatalist();
+        }
+
+        function initSystemLibrary() {
+            systemLibrary = JSON.parse(JSON.stringify(defaultSystemLibrary));
+            for(let group in systemLibrary) {
+                systemLibrary[group].forEach(eq => {
+                    eq.id = 'sys_' + Math.random().toString(36).substr(2, 9);
+                    eq.isCustom = false;
+                    if(!eq.comment) eq.comment = "";
+                });
+            }
+            saveSystemLibrary();
+        }
+
+        function saveSystemLibrary() { localStorage.setItem('enginex_v11_sys_lib', JSON.stringify(systemLibrary)); }
+
+        function saveEquation() {
+            let group = document.getElementById('eq-group').value.trim();
+            const name = document.getElementById('eq-name').value.trim();
+            const formula = document.getElementById('eq-formula').value.trim();
+            const comment = document.getElementById('eq-comment').value.trim();
+
+            if (!group) group = "Fórmulas Usuario";
+            if (!name || !formula) { alert('Es necesario rellenar nombre y ecuación.'); return; }
+            
+            let solveFormula = formula
+                .replace(/\$\$/g, '').replace(/\\frac\{([^}]+)\}\{([^}]+)\}/g, '($1)/($2)')
+                .replace(/\\sqrt\{([^}]+)\}/g, 'sqrt($1)').replace(/\\cdot/g, '*')
+                .replace(/\\pi/g, 'PI').replace(/\\lambda/g, 'lambda')
+                .replace(/\\omega/g, 'w').replace(/\\alpha/g, 'Alfa').replace(/\\beta/g, 'Beta')
+                .replace(/\^{([^}]+)}/g, '**($1)').replace(/\^([a-zA-Z0-9]+)/g, '**$1')
+                .replace(/_\{([^}]+)\}/g, '$1').replace(/_([a-zA-Z0-9]+)/g, '$1')
+                .replace(/\\times/g, '*').replace(/\\left/g, '').replace(/\\right/g, '')
+                .replace(/\\[\[\(]/g, '').replace(/\\[\]\)]/g, '').trim();
+
+            if (editingEqId) {
+                if (editingEqIsCustom) {
+                    let idx = customEquations.findIndex(e => e.id.toString() === editingEqId.toString());
+                    if(idx > -1) {
+                        customEquations[idx].group = group; customEquations[idx].name = name;
+                        customEquations[idx].formula = formula; customEquations[idx].solveFormula = solveFormula;
+                        customEquations[idx].comment = comment;
+                    }
+                    localStorage.setItem('enginex_v11_usr_lib', JSON.stringify(customEquations));
+                } else {
+                    if(systemLibrary[editingOldGroup]) {
+                        systemLibrary[editingOldGroup] = systemLibrary[editingOldGroup].filter(e => e.id.toString() !== editingEqId.toString());
+                        if(systemLibrary[editingOldGroup].length === 0) delete systemLibrary[editingOldGroup];
+                    }
+                    if(!systemLibrary[group]) systemLibrary[group] = [];
+                    systemLibrary[group].push({ id: editingEqId, group: group, name: name, formula: formula, solveFormula: solveFormula, comment: comment, isCustom: false });
+                    saveSystemLibrary();
+                }
+                let targetId = editingEqId;
+                cancelEdit();
+                loadLibraries();
+                let allEqs = customEquations.slice();
+                Object.values(systemLibrary).forEach(arr => allEqs = allEqs.concat(arr));
+                let savedEq = allEqs.find(e => e.id.toString() === targetId.toString());
+                if(savedEq) selectEquation(savedEq);
+            } else {
+                const newObj = { group, name, formula, solveFormula, comment, isCustom: true, id: Date.now() };
+                customEquations.push(newObj);
+                localStorage.setItem('enginex_v11_usr_lib', JSON.stringify(customEquations));
+                cancelEdit();
+                loadLibraries(); 
+                selectEquation(newObj);
+            }
+        }
+
+        function editCurrentEquation() {
+            if(!currentSelectedEq) return;
+            document.getElementById('eq-group').value = currentSelectedEq.group || "";
+            document.getElementById('eq-name').value = currentSelectedEq.name || "";
+            document.getElementById('eq-formula').value = currentSelectedEq.formula || "";
+            document.getElementById('eq-comment').value = currentSelectedEq.comment || "";
+            
+            editingEqId = currentSelectedEq.id;
+            editingEqIsCustom = currentSelectedEq.isCustom;
+            editingOldGroup = currentSelectedEq.group;
+            
+            document.getElementById('config-eq-title').innerText = "Editando Ecuación";
+            document.getElementById('btn-save-eq').innerText = "Actualizar Ecuación";
+            document.getElementById('btn-cancel-edit').style.display = "block";
+            
+            liveRenderLatex('eq-formula', 'custom-render-area');
+            document.querySelector('.layout-col-left').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function cancelEdit() {
+            editingEqId = null;
+            document.getElementById('eq-group').value = ''; document.getElementById('eq-name').value = '';
+            document.getElementById('eq-formula').value = ''; document.getElementById('eq-comment').value = '';
+            
+            document.getElementById('config-eq-title').innerText = "Configurar Nueva Ecuación";
+            document.getElementById('btn-save-eq').innerText = "Guardar en la Biblioteca";
+            document.getElementById('btn-cancel-edit').style.display = "none";
+            document.getElementById('custom-render-area').innerHTML = 'Esperando expresión LaTeX...';
+        }
+
+        function deleteEquation(id, e) {
+            e.stopPropagation();
+            if(!confirm("¿Estás seguro de eliminar esta ecuación? Esta acción no se puede deshacer.")) return;
+            const strId = id.toString();
+            if (strId.startsWith('sys_')) {
+                for(let group in systemLibrary) {
+                    systemLibrary[group] = systemLibrary[group].filter(eq => eq.id.toString() !== strId);
+                    if(systemLibrary[group].length === 0) delete systemLibrary[group];
+                }
+                saveSystemLibrary();
+            } else {
+                customEquations = customEquations.filter(eq => eq.id.toString() !== strId);
+                localStorage.setItem('enginex_v11_usr_lib', JSON.stringify(customEquations));
+            }
+
+            if (currentSelectedEq && currentSelectedEq.id.toString() === strId) {
+                currentSelectedEq = null;
+                document.getElementById('solver-body').style.display = 'none'; document.getElementById('solver-header').style.display = 'none';
+                document.getElementById('selected-eq-latex-box').style.display = 'none'; document.getElementById('solver-placeholder').style.display = 'block';
+                document.getElementById('solver-title-placeholder').style.display = 'block';
+            }
+            loadLibraries();
+        }
+
+        function updateGroupDatalist() {
+            const dl = document.getElementById('group-datalist');
+            const sets = new Set(Object.keys(systemLibrary));
+            customEquations.forEach(eq => sets.add(eq.group));
+            dl.innerHTML = '';
+            sets.forEach(s => { let op = document.createElement('option'); op.value = s; dl.appendChild(op); });
+        }
+
+        function renderEquationList() {
+            const container = document.getElementById('equations-container');
+            const searchInput = document.getElementById('eq-search');
+            const searchQuery = searchInput ? searchInput.value.trim().toLowerCase() : '';
+            container.innerHTML = '';
+            const masterMap = {};
+
+            for (const [gName, list] of Object.entries(systemLibrary)) { masterMap[gName] = list.map(item => ({ ...item, group: gName })); }
+            customEquations.forEach(eq => { if(!masterMap[eq.group]) masterMap[eq.group] = []; masterMap[eq.group].push(eq); });
+
+            for (const [groupName, items] of Object.entries(masterMap)) {
+                const filteredItems = items.filter(eq => eq.name.toLowerCase().includes(searchQuery));
+                if (filteredItems.length === 0) continue;
+
+                const details = document.createElement('details'); details.className = 'group-details';
+                let hasActive = false;
+                const summary = document.createElement('summary'); summary.innerHTML = `&#9662; ${groupName} (${filteredItems.length})`;
+                details.appendChild(summary);
+
+                filteredItems.forEach(eq => {
+                    const isSel = currentSelectedEq && currentSelectedEq.id === eq.id;
+                    if (isSel) hasActive = true;
+                    
+                    const div = document.createElement('div'); div.className = `eq-item ${isSel ? 'selected' : ''}`; div.onclick = () => selectEquation(eq);
+                    const badge = eq.isCustom ? `<span class="badge badge-usr">USR</span>` : `<span class="badge badge-sys">SYS</span>`;
+                    const del = `<button class="delete-eq-btn" onclick="deleteEquation('${eq.id}', event)">Eliminar</button>`;
+
+                    let previewFormula = eq.formula.replace(/\$\$/g, '').substring(0, 60);
+                    if (eq.formula.replace(/\$\$/g, '').length > 60) previewFormula += '...';
+                    
+                    div.innerHTML = `
+                        <div class="eq-item-name">${badge} ${eq.name}</div>
+                        <div class="eq-item-latex">${previewFormula}</div>
+                        ${del}
+                    `;
+                    details.appendChild(div);
+                });
+                if (hasActive || searchQuery !== '') details.open = true;
+                container.appendChild(details);
+            }
+            if (container.innerHTML === '' && searchQuery !== '') {
+                container.innerHTML = `<div style="padding: 20px 10px; text-align: center; color: var(--text-muted); font-size: 13px;">No se encontraron ecuaciones que contengan "${searchQuery}"</div>`;
+            }
+        }
+
+        // --- SYMBOLIC ALGEBRA ENGINE (despeje simbólico) ---
+        // Parsea "LHS = RHS" a un árbol de expresión y, si la variable objetivo aparece
+        // exactamente una vez en toda la ecuación, la aísla invirtiendo cada operación de
+        // afuera hacia adentro (igual que se despeja a mano). Si aparece más de una vez
+        // (ej. una variable elevada al cuadrado y también lineal, como en la cuadrática),
+        // no es álgebra de un solo paso y se devuelve null; el solver numérico existente
+        // sigue resolviendo esos casos, solo que sin mostrar la fórmula reordenada.
+        function tokenizeExpr(str) {
+            const tokens = [];
+            let i = 0;
+            while (i < str.length) {
+                const c = str[i];
+                if (/\s/.test(c)) { i++; continue; }
+                if (/[0-9.]/.test(c)) {
+                    let j = i;
+                    while (j < str.length && /[0-9.]/.test(str[j])) j++;
+                    if (str[j] === 'e' || str[j] === 'E') {
+                        let k = j + 1;
+                        if (str[k] === '+' || str[k] === '-') k++;
+                        if (/[0-9]/.test(str[k])) { while (k < str.length && /[0-9]/.test(str[k])) k++; j = k; }
+                    }
+                    tokens.push({ type: 'num', value: parseFloat(str.slice(i, j)) });
+                    i = j; continue;
+                }
+                if (/[a-zA-Z_]/.test(c)) {
+                    let j = i;
+                    while (j < str.length && /[a-zA-Z0-9_]/.test(str[j])) j++;
+                    tokens.push({ type: 'ident', value: str.slice(i, j) });
+                    i = j; continue;
+                }
+                if (c === '*' && str[i + 1] === '*') { tokens.push({ type: 'op', value: '**' }); i += 2; continue; }
+                if ('+-*/(),'.includes(c)) { tokens.push({ type: c === ',' ? 'comma' : (c === '(' ? 'lparen' : (c === ')' ? 'rparen' : 'op')), value: c }); i++; continue; }
+                if (c === '=') { tokens.push({ type: 'eq', value: '=' }); i++; continue; }
+                throw new Error('Carácter inesperado: ' + c);
+            }
+            return tokens;
+        }
+
+        function parseExprTokens(tokens) {
+            let pos = 0;
+            const peek = () => tokens[pos];
+            const eat = (type) => { const t = tokens[pos]; if (!t || (type && t.type !== type)) throw new Error('Error de sintaxis'); pos++; return t; };
+
+            function parseAdd() {
+                let node = parseMul();
+                while (peek() && peek().type === 'op' && (peek().value === '+' || peek().value === '-')) {
+                    const op = eat('op').value;
+                    node = { type: 'bin', op, left: node, right: parseMul() };
+                }
+                return node;
+            }
+            function parseMul() {
+                let node = parsePow();
+                while (peek() && peek().type === 'op' && (peek().value === '*' || peek().value === '/')) {
+                    const op = eat('op').value;
+                    node = { type: 'bin', op, left: node, right: parsePow() };
+                }
+                return node;
+            }
+            function parsePow() {
+                let node = parseUnary();
+                if (peek() && peek().type === 'op' && peek().value === '**') {
+                    eat('op');
+                    return { type: 'bin', op: '**', left: node, right: parsePow() };
+                }
+                return node;
+            }
+            function parseUnary() {
+                if (peek() && peek().type === 'op' && peek().value === '-') { eat('op'); return { type: 'neg', arg: parseUnary() }; }
+                if (peek() && peek().type === 'op' && peek().value === '+') { eat('op'); return parseUnary(); }
+                return parsePrimary();
+            }
+            function parsePrimary() {
+                const t = peek();
+                if (!t) throw new Error('Expresión incompleta');
+                if (t.type === 'num') { eat('num'); return { type: 'num', value: t.value }; }
+                if (t.type === 'lparen') { eat('lparen'); const n = parseAdd(); eat('rparen'); return n; }
+                if (t.type === 'ident') {
+                    eat('ident');
+                    if (peek() && peek().type === 'lparen') {
+                        eat('lparen');
+                        const args = [parseAdd()];
+                        while (peek() && peek().type === 'comma') { eat('comma'); args.push(parseAdd()); }
+                        eat('rparen');
+                        return { type: 'call', fn: t.value, args };
+                    }
+                    return { type: 'var', name: t.value };
+                }
+                throw new Error('Token inesperado');
+            }
+
+            const node = parseAdd();
+            if (pos !== tokens.length) throw new Error('Sobran caracteres en la expresión');
+            return node;
+        }
+
+        function parseEquationToAst(formulaStr) {
+            const cleaned = formulaStr.replace(/\^/g, '**');
+            const parts = cleaned.split('=');
+            if (parts.length !== 2) throw new Error('La fórmula debe tener exactamente un "="');
+            return { left: parseExprTokens(tokenizeExpr(parts[0])), right: parseExprTokens(tokenizeExpr(parts[1])) };
+        }
+
+        function countVarOccurrences(node, varName) {
+            if (!node) return 0;
+            if (node.type === 'var') return node.name === varName ? 1 : 0;
+            if (node.type === 'num') return 0;
+            if (node.type === 'neg') return countVarOccurrences(node.arg, varName);
+            if (node.type === 'bin') return countVarOccurrences(node.left, varName) + countVarOccurrences(node.right, varName);
+            if (node.type === 'call') return node.args.reduce((sum, a) => sum + countVarOccurrences(a, varName), 0);
+            return 0;
+        }
+
+        function invertForVar(node, other, varName) {
+            if (node.type === 'var' && node.name === varName) return other;
+            if (node.type === 'neg') return invertForVar(node.arg, { type: 'neg', arg: other }, varName);
+            if (node.type === 'call') {
+                const arg = node.args[0];
+                let newOther;
+                switch (node.fn) {
+                    case 'sqrt': newOther = { type: 'bin', op: '**', left: other, right: { type: 'num', value: 2 } }; break;
+                    case 'exp': newOther = { type: 'call', fn: 'ln', args: [other] }; break;
+                    case 'ln': newOther = { type: 'call', fn: 'exp', args: [other] }; break;
+                    case 'log': case 'log10': newOther = { type: 'bin', op: '**', left: { type: 'num', value: 10 }, right: other }; break;
+                    case 'sin': newOther = { type: 'call', fn: 'asin', args: [other] }; break;
+                    case 'cos': newOther = { type: 'call', fn: 'acos', args: [other] }; break;
+                    case 'tan': newOther = { type: 'call', fn: 'atan', args: [other] }; break;
+                    default: throw new Error('Función no invertible: ' + node.fn);
+                }
+                return invertForVar(arg, newOther, varName);
+            }
+            if (node.type === 'bin') {
+                const leftHas = countVarOccurrences(node.left, varName) > 0;
+                let newOther;
+                if (leftHas) {
+                    switch (node.op) {
+                        case '+': newOther = { type: 'bin', op: '-', left: other, right: node.right }; break;
+                        case '-': newOther = { type: 'bin', op: '+', left: other, right: node.right }; break;
+                        case '*': newOther = { type: 'bin', op: '/', left: other, right: node.right }; break;
+                        case '/': newOther = { type: 'bin', op: '*', left: other, right: node.right }; break;
+                        case '**': newOther = { type: 'bin', op: '**', left: other, right: { type: 'bin', op: '/', left: { type: 'num', value: 1 }, right: node.right } }; break;
+                        default: throw new Error('Operador no soportado: ' + node.op);
+                    }
+                    return invertForVar(node.left, newOther, varName);
+                } else {
+                    switch (node.op) {
+                        case '+': newOther = { type: 'bin', op: '-', left: other, right: node.left }; break;
+                        case '-': newOther = { type: 'bin', op: '-', left: node.left, right: other }; break;
+                        case '*': newOther = { type: 'bin', op: '/', left: other, right: node.left }; break;
+                        case '/': newOther = { type: 'bin', op: '/', left: node.left, right: other }; break;
+                        case '**': newOther = { type: 'bin', op: '/', left: { type: 'call', fn: 'ln', args: [other] }, right: { type: 'call', fn: 'ln', args: [node.left] } }; break;
+                        default: throw new Error('Operador no soportado: ' + node.op);
+                    }
+                    return invertForVar(node.right, newOther, varName);
+                }
+            }
+            throw new Error('Nodo no soportado');
+        }
+
+        // Devuelve el AST ya despejado para varName, o null si no es posible de forma simbólica simple.
+        function solveEquationSymbolically(formulaStr, varName) {
+            try {
+                const { left, right } = parseEquationToAst(formulaStr);
+                const totalOccurrences = countVarOccurrences(left, varName) + countVarOccurrences(right, varName);
+                if (totalOccurrences !== 1) return null;
+                const leftHasVar = countVarOccurrences(left, varName) > 0;
+                const sideWithVar = leftHasVar ? left : right;
+                const otherSide = leftHasVar ? right : left;
+                return invertForVar(sideWithVar, otherSide, varName);
+            } catch (e) {
+                return null;
+            }
+        }
+
+        function prettifyVarNameLatex(name) {
+            const specialMap = { PI: '\\pi', pi: '\\pi', E: 'e', w: '\\omega', omega: '\\omega', Omega: '\\Omega', lambda: '\\lambda', Lambda: '\\lambda', Alfa: '\\alpha', Beta: '\\beta' };
+            if (specialMap[name]) return specialMap[name];
+            if (name.length <= 1) return name;
+            return `${name[0]}_{${name.slice(1)}}`;
+        }
+
+        function formatSymbolicNumber(value) {
+            if (Number.isInteger(value)) return value.toString();
+            return value.toFixed(6).replace(/\.?0+$/, "");
+        }
+
+        function opPrecedence(op) { if (op === '+' || op === '-') return 1; if (op === '*' || op === '/') return 2; if (op === '**') return 3; return 4; }
+
+        function callToSymbolicLatex(node) {
+            const a = node.args.map(x => astToSymbolicLatex(x, 0));
+            const wraps = { ln: '\\ln', log: '\\log', log10: '\\log_{10}', sin: '\\sin', cos: '\\cos', tan: '\\tan', asin: '\\sin^{-1}', acos: '\\cos^{-1}', atan: '\\tan^{-1}' };
+            if (node.fn === 'sqrt') return `\\sqrt{${a[0]}}`;
+            if (node.fn === 'exp') return `e^{${a[0]}}`;
+            if (wraps[node.fn]) return `${wraps[node.fn]}\\left(${a[0]}\\right)`;
+            return `\\text{${node.fn}}\\left(${a.join(', ')}\\right)`;
+        }
+
+        function astToSymbolicLatex(node, parentPrec) {
+            if (node.type === 'num') return formatSymbolicNumber(node.value);
+            if (node.type === 'var') return prettifyVarNameLatex(node.name);
+            if (node.type === 'neg') return `-${astToSymbolicLatex(node.arg, 2.5)}`;
+            if (node.type === 'call') return callToSymbolicLatex(node);
+            if (node.type === 'bin') {
+                if (node.op === '/') return `\\frac{${astToSymbolicLatex(node.left, 0)}}{${astToSymbolicLatex(node.right, 0)}}`;
+                if (node.op === '**') {
+                    if (node.right.type === 'num' && node.right.value === 0.5) return `\\sqrt{${astToSymbolicLatex(node.left, 0)}}`;
+                    return `${astToSymbolicLatex(node.left, 4)}^{${astToSymbolicLatex(node.right, 0)}}`;
+                }
+                const prec = opPrecedence(node.op);
+                const left = astToSymbolicLatex(node.left, prec);
+                const right = astToSymbolicLatex(node.right, prec + 1);
+                const sym = node.op === '*' ? ' \\cdot ' : (node.op === '+' ? ' + ' : ' - ');
+                let result = `${left}${sym}${right}`;
+                if (prec < parentPrec) result = `\\left(${result}\\right)`;
+                return result;
+            }
+            return '?';
+        }
+
+        function updateSolvedFormulaDisplay() {
+            const box = document.getElementById('solved-formula-box');
+            const unavailable = document.getElementById('solved-formula-unavailable');
+            if (!currentSelectedEq) { box.style.display = 'none'; unavailable.style.display = 'none'; return; }
+            const targetInput = document.querySelector('input[name="target_var"]:checked');
+            if (!targetInput) { box.style.display = 'none'; unavailable.style.display = 'none'; return; }
+            const targetVar = targetInput.value;
+            const solveFormula = currentSelectedEq.solveFormula || currentSelectedEq.formula;
+
+            const solvedAst = solveEquationSymbolically(solveFormula, targetVar);
+            if (!solvedAst) {
+                box.style.display = 'none';
+                unavailable.style.display = 'block';
+                return;
+            }
+            unavailable.style.display = 'none';
+            box.style.display = 'block';
+            const latex = `$$${prettifyVarNameLatex(targetVar)} = ${astToSymbolicLatex(solvedAst, 0)}$$`;
+            renderLatexPreview(latex, 'solved-formula-render', { emptyMessage: '' });
+        }
+
+        // --- COMPUTATIONAL ROOT SOLVER ---
+        function getVariables(eq) {
+            let solveFormula = eq.solveFormula || eq.formula;
+            solveFormula = solveFormula.replace(/\$\$/g, '').replace(/\\[a-zA-Z]+/g, '');
+            let matches = solveFormula.match(/[a-zA-Z_][a-zA-Z0-9_]*/g) || [];
+            const reserved = ['Math', 'exp', 'sqrt', 'pow', 'log', 'ln', 'sin', 'cos', 'tan', 'PI', 'pi', 'E', 'e', 'abs', 'lambda', 'Lambda', 'Alfa', 'Beta', 'omega', 'Omega', 'w'];
+            let vars = [];
+            matches.forEach(m => { if (!reserved.includes(m) && !vars.includes(m)) vars.push(m); });
+            return vars;
+        }
+
+        function selectEquation(eq) {
+            currentSelectedEq = eq; 
+            renderEquationList();
+            
+            document.getElementById('solver-placeholder').style.display = 'none';
+            document.getElementById('solver-title-placeholder').style.display = 'none';
+            document.getElementById('solver-header').style.display = 'flex';
+            document.getElementById('solver-body').style.display = 'block';
+            document.getElementById('selected-eq-latex-box').style.display = 'block';
+            document.getElementById('solver-result-zone').style.display = 'none';
+            document.getElementById('solver-title').innerText = `${eq.group} ➝ ${eq.name}`;
+            
+            const commentZone = document.getElementById('solver-comment-zone');
+            const commentText = document.getElementById('solver-comment-text');
+            if (eq.comment && eq.comment.trim() !== "") {
+                commentText.innerText = eq.comment; commentZone.style.display = "block";
+            } else { commentZone.style.display = "none"; }
+
+            renderLatexPreview(eq.formula, 'global-latex-render', { emptyMessage: '' });
+
+            const vars = getVariables(eq);
+            const tbody = document.getElementById('params-table-body');
+            tbody.innerHTML = '';
+            vars.forEach((v, index) => {
+                let tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td style="font-family: 'Courier New', monospace; font-weight: bold; font-size: 15px; color: var(--cyan);">${v}</td>
+                    <td><label class="radio-label"><input type="radio" name="target_var" value="${v}" ${index === 0 ? 'checked' : ''} onchange="toggleFormInputs()">Incógnita</label></td>
+                    <td><input type="text" id="param_val_${v}" class="input-control param-input-field" placeholder="Ej: 5.5, 1e-3, 50"></td>
+                `;
+                tbody.appendChild(tr);
+            });
+            toggleFormInputs();
+        }
+
+        function toggleFormInputs() {
+            const target = document.querySelector('input[name="target_var"]:checked').value;
+            document.querySelectorAll('.param-input-field').forEach(inp => {
+                let vName = inp.id.replace('param_val_', '');
+                if (vName === target) {
+                    inp.disabled = true; inp.value = ''; inp.placeholder = '[Despejando...]';
+                    inp.style.backgroundColor = 'rgba(0,0,0,0.3)'; inp.style.borderColor = 'transparent';
+                } else {
+                    inp.disabled = false; inp.placeholder = 'Ingresa número o usa teclado';
+                    inp.style.backgroundColor = 'var(--bg-input)'; inp.style.borderColor = 'var(--border)';
+                }
+            });
+            updateSolvedFormulaDisplay();
+        }
+
+        function evalMathCode(formulaStr, targetVar, targetValue, variablesMap) {
+            let safeFormula = formulaStr.replace(/\^/g, '**');
+            let segments = safeFormula.split('=');
+            let leftSide = segments[0].trim(), rightSide = segments[1] ? segments[1].trim() : "0";
+
+            let varNames = [], varVals = [];
+            for(let k in variablesMap) { varNames.push(k); varVals.push(variablesMap[k]); }
+            varNames.push(targetVar); varVals.push(targetValue);
+            
+            try {
+                let fn = new Function(...varNames, 'PI', 'pi', 'E', 'e', 'lambda', 'Lambda', 'w', 'omega', 'Omega', `with(Math) { return (${leftSide}) - (${rightSide}); }`);
+                return fn(...varVals, Math.PI, Math.PI, Math.E, Math.E, 0.001, 0.001, 1, 1, 1);
+            } catch(e) { return NaN; }
+        }
+
+        function executeSolve() {
+            if(!currentSelectedEq) return;
+            const solveFormula = currentSelectedEq.solveFormula || currentSelectedEq.formula;
+            const targetVar = document.querySelector('input[name="target_var"]:checked').value;
+            const vars = getVariables(currentSelectedEq);
+
+            let variablesMap = {}, err = false;
+            vars.forEach(v => {
+                if (v !== targetVar) {
+                    let textVal = document.getElementById(`param_val_${v}`).value.trim();
+                    if(!textVal) { alert(`Falta rellenar el valor del parámetro: ${v}`); err = true; return; }
+                    try {
+                        let parsed = new Function(`return (${textVal});`)();
+                        if(isNaN(parsed) || parsed === null) throw "NaN";
+                        variablesMap[v] = parsed;
+                    } catch(e) { alert(`Error numérico en el parámetro ${v}`); err = true; return; }
+                }
+            });
+            if(err) return;
+
+            let roots = computeAllNumericalRoots(solveFormula, targetVar, variablesMap);
+            if(roots.length > 0) showResultOutput(roots, targetVar, false);
+            else showResultOutput("Sin convergencia física. Revisar valores.", targetVar, true);
+        }
+
+        // Busca TODAS las raíces reales de f(target) = ladoIzq - ladoDer dentro de un rango amplio,
+        // en vez de devolver solo la primera que encuentra. Recorre una grilla de puntos (densa cerca
+        // de cero, dispersa en los extremos), detecta cada cambio de signo entre puntos consecutivos
+        // y refina cada uno con bisección. Necesario porque una variable que aparece más de una vez
+        // (ej. lineal y al cuadrado) puede tener 0, 1 o 2+ soluciones matemáticamente válidas.
+        function computeAllNumericalRoots(formula, targetVar, variablesMap) {
+            const tolerance = 1e-9;
+            const roots = [];
+
+            function evalAt(x) { return evalMathCode(formula, targetVar, x, variablesMap); }
+
+            function isDuplicateRoot(r) {
+                return roots.some(existing => Math.abs(existing - r) < Math.max(1e-6, Math.abs(existing) * 1e-6));
+            }
+
+            function addRoot(r) {
+                if (r === null || isNaN(r) || !isFinite(r)) return;
+                if (!isDuplicateRoot(r)) roots.push(r);
+            }
+
+            function bisect(a, b, fa) {
+                for (let k = 0; k < 100; k++) {
+                    const mid = (a + b) / 2;
+                    const fmid = evalAt(mid);
+                    if (isNaN(fmid)) { a = mid; continue; }
+                    if (Math.abs(fmid) < tolerance || Math.abs(b - a) < 1e-12) return mid;
+                    if (fa * fmid <= 0) { b = mid; } else { a = mid; fa = fmid; }
+                }
+                return (a + b) / 2;
+            }
+
+            // Grilla de escaneo: densa entre -100 y 100 (rango típico de la mayoría de valores físicos),
+            // y dispersa hasta 1e6 en ambas direcciones para no perder raíces fuera de ese rango.
+            const gridPoints = [
+                -1e6, -1e5, -1e4, -1e3, -500, -200, -100,
+                -50, -20, -10, -5, -2, -1, -0.5, -0.25, -0.1, -0.025,
+                0,
+                0.025, 0.1, 0.25, 0.5, 0.7, 1, 2, 5, 10, 15, 20, 50, 100,
+                200, 500, 1e3, 1e4, 1e5, 1e6
+            ];
+            const uniqueSorted = [...new Set(gridPoints)].sort((a, b) => a - b);
+
+            let prevX = uniqueSorted[0], prevF = evalAt(prevX);
+            for (let i = 1; i < uniqueSorted.length; i++) {
+                const x = uniqueSorted[i];
+                const f = evalAt(x);
+                if (!isNaN(prevF) && !isNaN(f)) {
+                    if (prevF === 0) addRoot(prevX);
+                    if (prevF * f < 0) addRoot(bisect(prevX, x, prevF));
+                    else if (f === 0) addRoot(x);
+                }
+                prevX = x; prevF = f;
+            }
+
+            // Refinamiento adicional con secante cerca de cero, por si el punto exacto de la raíz
+            // cae muy cerca del límite de dos celdas de la grilla y el cambio de signo no se detectó limpio.
+            let x0 = 0.0, x1 = 0.1, f0 = evalAt(x0), f1 = evalAt(x1);
+            for (let i = 0; i < 70; i++) {
+                if (Math.abs(f1 - f0) < 1e-15) break;
+                let xNext = x1 - f1 * (x1 - x0) / (f1 - f0);
+                if (isNaN(xNext) || !isFinite(xNext)) break;
+                let fNext = evalAt(xNext);
+                if (Math.abs(fNext) < tolerance) { addRoot(xNext); break; }
+                x0 = x1; f0 = f1; x1 = xNext; f1 = fNext;
+            }
+
+            roots.sort((a, b) => Math.abs(a) - Math.abs(b));
+            return roots;
+        }
+
+        function formatNumericValue(val) {
+            const absoluteValue = Math.abs(val);
+            if (absoluteValue !== 0 && (absoluteValue < 1e-3 || absoluteValue > 1e5)) return val.toExponential(6);
+            return val.toFixed(6).replace(/\.?0+$/, "");
+        }
+
+        function showResultOutput(result, name, isErr) {
+            const zone = document.getElementById('solver-result-zone');
+            const container = document.getElementById('solver-results-container');
+            zone.style.display = 'block';
+            container.innerHTML = '';
+
+            if (isErr) {
+                const box = document.createElement('div');
+                box.className = 'result-box error';
+                box.innerHTML = `<div class="result-title">Error Analítico</div><div class="result-value" style="font-size:14px;">${result}</div>`;
+                container.appendChild(box);
+                return;
+            }
+
+            const roots = result;
+            lastCalculatedRoots = roots;
+            lastCalculatedName = name;
+
+            if (roots.length > 1) {
+                const notice = document.createElement('div');
+                notice.style.cssText = 'font-size:12px; color: var(--text-muted); margin-bottom: 12px; padding: 10px 12px; background: rgba(244, 63, 94, 0.06); border-left: 3px solid var(--rose); border-radius: 4px;';
+                notice.innerHTML = `⚠ Esta ecuación tiene <b>${roots.length} soluciones</b> matemáticamente válidas para <b>${name}</b>. Revisá cuál tiene sentido físico según el rango real de tu circuito/dispositivo.`;
+                container.appendChild(notice);
+            }
+
+            roots.forEach((val, idx) => {
+                const box = document.createElement('div');
+                box.className = 'result-box';
+                box.style.marginBottom = '12px';
+                const label = roots.length > 1 ? `Solución ${idx + 1} de ${roots.length} para` : 'Valor calculado para la Incógnita';
+                box.innerHTML = `
+                    <div class="result-title">${label} (<b>${name}</b>)</div>
+                    <div class="result-value">${formatNumericValue(val)}</div>
+                    <button class="btn btn-outline" style="margin-top: 12px;" onclick="saveResultToMemory(${idx})">💾 Guardar este valor en Memoria</button>
+                `;
+                container.appendChild(box);
+            });
+        }
+
+        // --- FUNCIONES DE MEMORIA DE VARIABLES ---
+        function saveResultToMemory(idx) {
+            const val = lastCalculatedRoots[idx];
+            const newId = Date.now() + idx;
+            savedVariables.push({ id: newId, name: lastCalculatedName + "_" + Math.floor(Math.random() * 100), val: val });
+            renderMemoryList();
+        }
+
+        function updateMemoryName(id, newName) {
+            const v = savedVariables.find(x => x.id === id);
+            if(v) v.name = newName;
+        }
+
+        function deleteMemory(id) {
+            savedVariables = savedVariables.filter(x => x.id !== id);
+            renderMemoryList();
+        }
+
+        function renderMemoryList() {
+            const container = document.getElementById('memory-list');
+            if(savedVariables.length === 0) {
+                container.innerHTML = '<p style="color: var(--text-muted); font-size: 13px; text-align: center; padding: 15px;">No hay variables guardadas. Calcula un valor arriba y presiona "Guardar".</p>';
+                return;
+            }
+            
+            container.innerHTML = '';
+            savedVariables.forEach(v => {
+                const row = document.createElement('div');
+                row.className = "memory-item";
+                
+                // Formateo visual del numero para la lista
+                let displayVal = Math.abs(v.val) > 1e5 || (Math.abs(v.val) > 0 && Math.abs(v.val) < 1e-3) 
+                                 ? v.val.toExponential(4) 
+                                 : v.val.toFixed(4).replace(/\.?0+$/, "");
+
+                row.innerHTML = `
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <input type="text" value="${v.name}" onchange="updateMemoryName(${v.id}, this.value)" title="Haz clic para renombrar la variable">
+                        <span style="color: var(--text-muted); font-size: 14px;">=</span>
+                        <span style="font-family: monospace; color: var(--emerald); font-weight: bold; font-size: 15px; margin-left: 5px;">${displayVal}</span>
+                    </div>
+                    <button class="delete-eq-btn" style="position: static; opacity: 1; font-size: 14px;" onclick="deleteMemory(${v.id})" title="Borrar variable">❌</button>
+                `;
+                container.appendChild(row);
+            });
+        }
+
+        // --- CANVAS INTERACTIVE GRAPH ENGINE ---
+        let canvas, ctx, isDragging = false, startX, startY, initialXMin, initialXMax, initialYMin, initialYMax;
+
+        function initGraph() {
+            canvas = document.getElementById('graphCanvas');
+            ctx = canvas.getContext('2d');
+            
+            canvas.addEventListener('mousedown', (e) => {
+                isDragging = true; startX = e.clientX; startY = e.clientY;
+                initialXMin = parseFloat(document.getElementById('xlim-min').value);
+                initialXMax = parseFloat(document.getElementById('xlim-max').value);
+                initialYMin = parseFloat(document.getElementById('ylim-min').value);
+                initialYMax = parseFloat(document.getElementById('ylim-max').value);
+            });
+            window.addEventListener('mouseup', () => { isDragging = false; });
+
+            canvas.addEventListener('mousemove', (e) => {
+                if (isDragging) {
+                    let dx = e.clientX - startX, dy = e.clientY - startY;
+                    let rect = canvas.getBoundingClientRect();
+                    let xShift = -(dx / rect.width) * (initialXMax - initialXMin);
+                    let yShift = (dy / rect.height) * (initialYMax - initialYMin);
+                    document.getElementById('xlim-min').value = (initialXMin + xShift).toFixed(4);
+                    document.getElementById('xlim-max').value = (initialXMax + xShift).toFixed(4);
+                    document.getElementById('ylim-min').value = (initialYMin + yShift).toFixed(4);
+                    document.getElementById('ylim-max').value = (initialYMax + yShift).toFixed(4);
+                    plot();
+                    document.getElementById('coordsOverlay').style.display = 'none';
+                } else { processGraphHover(e); }
+            });
+
+            canvas.addEventListener('wheel', (e) => {
+                e.preventDefault();
+                const rect = canvas.getBoundingClientRect();
+                const mouseX = e.clientX - rect.left, mouseY = e.clientY - rect.top;
+                let xMin = parseFloat(document.getElementById('xlim-min').value), xMax = parseFloat(document.getElementById('xlim-max').value);
+                let yMin = parseFloat(document.getElementById('ylim-min').value), yMax = parseFloat(document.getElementById('ylim-max').value);
+                const zoomFactor = e.deltaY > 0 ? 1.15 : 0.85;
+
+                let xPos = xMin + (mouseX / rect.width) * (xMax - xMin);
+                document.getElementById('xlim-min').value = (xPos - (xPos - xMin) * zoomFactor).toFixed(4);
+                document.getElementById('xlim-max').value = (xPos + (xMax - xPos) * zoomFactor).toFixed(4);
+
+                let yPos = yMin + ((rect.height - mouseY) / rect.height) * (yMax - yMin);
+                document.getElementById('ylim-min').value = (yPos - (yPos - yMin) * zoomFactor).toFixed(4);
+                document.getElementById('ylim-max').value = (yPos + (yMax - yPos) * zoomFactor).toFixed(4);
+                plot();
+            }, {passive: false});
+
+            canvas.addEventListener('mouseleave', () => { document.getElementById('coordsOverlay').style.display = 'none'; isDragging = false; plot(); });
+            plot();
+        }
+
+        function resetGraphLimits() {
+            document.getElementById('xlim-min').value = "0"; document.getElementById('xlim-max').value = "10";
+            document.getElementById('ylim-min').value = "-1"; document.getElementById('ylim-max').value = "1";
+            plot();
+        }
+
+        function plot() {
+            if(!canvas) return;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            const xMin = parseFloat(document.getElementById('xlim-min').value), xMax = parseFloat(document.getElementById('xlim-max').value);
+            const yMin = parseFloat(document.getElementById('ylim-min').value), yMax = parseFloat(document.getElementById('ylim-max').value);
+            if(isNaN(xMin) || isNaN(xMax) || isNaN(yMin) || isNaN(yMax) || xMin >= xMax || yMin >= yMax) return;
+
+            const mapX = (xm) => ((xm - xMin) / (xMax - xMin)) * canvas.width;
+            const mapY = (ym) => canvas.height - (((ym - yMin) / (yMax - yMin)) * canvas.height);
+
+            ctx.strokeStyle = 'rgba(255,255,255,0.05)'; ctx.lineWidth = 1; ctx.font = '10px Courier New'; ctx.fillStyle = '#64748b';
+            for(let i = 0; i <= 10; i++) {
+                let xm = xMin + i * (xMax - xMin) / 10, xs = mapX(xm);
+                ctx.beginPath(); ctx.moveTo(xs, 0); ctx.lineTo(xs, canvas.height); ctx.stroke();
+                ctx.fillText(xm.toFixed(2), xs + 4, canvas.height - 6);
+            }
+            for(let i = 0; i <= 10; i++) {
+                let ym = yMin + i * (yMax - yMin) / 10, ys = mapY(ym);
+                ctx.beginPath(); ctx.moveTo(0, ys); ctx.lineTo(canvas.width, ys); ctx.stroke();
+                ctx.fillText(ym.toFixed(2), 6, ys - 4);
+            }
+
+            ctx.strokeStyle = '#334155'; ctx.lineWidth = 2;
+            let xZero = mapX(0), yZero = mapY(0);
+            if(xZero >= 0 && xZero <= canvas.width) { ctx.beginPath(); ctx.moveTo(xZero, 0); ctx.lineTo(xZero, canvas.height); ctx.stroke(); }
+            if(yZero >= 0 && yZero <= canvas.height) { ctx.beginPath(); ctx.moveTo(0, yZero); ctx.lineTo(canvas.width, yZero); ctx.stroke(); }
+
+            const f1Expr = document.getElementById('graph-f1').value.trim();
+            if(f1Expr) drawCurveSafely(f1Expr, mapX, mapY, xMin, xMax, '#06b6d4');
+            const f2Expr = document.getElementById('graph-f2').value.trim();
+            if(f2Expr) drawCurveSafely(f2Expr, mapX, mapY, xMin, xMax, '#f43f5e');
+        }
+
+        function drawCurveSafely(expr, mapX, mapY, xMin, xMax, colorStr) {
+            ctx.strokeStyle = colorStr; ctx.lineWidth = 3; ctx.beginPath();
+            let isFirst = true, fn;
+            try { fn = new Function('x', 'PI', 'pi', 'E', 'e', 'w', 'omega', 'Omega', `with(Math) { return ${expr}; }`); } catch(e) { return; }
+            for(let sx = 0; sx <= canvas.width; sx += 2) {
+                let xm = xMin + (sx / canvas.width) * (xMax - xMin);
+                try {
+                    let ym = fn(xm, Math.PI, Math.PI, Math.E, Math.E, 1, 1, 1);
+                    if(isNaN(ym) || !isFinite(ym)) { isFirst = true; continue; }
+                    let sy = mapY(ym);
+                    if(isFirst) { ctx.moveTo(sx, sy); isFirst = false; } else { ctx.lineTo(sx, sy); }
+                } catch(e) { isFirst = true; }
+            }
+            ctx.stroke();
+        }
+
+        function processGraphHover(e) {
+            const rect = canvas.getBoundingClientRect();
+            const sx = ((e.clientX - rect.left) / rect.width) * canvas.width, sy = ((e.clientY - rect.top) / rect.height) * canvas.height;
+            const xMin = parseFloat(document.getElementById('xlim-min').value), xMax = parseFloat(document.getElementById('xlim-max').value);
+            const yMin = parseFloat(document.getElementById('ylim-min').value), yMax = parseFloat(document.getElementById('ylim-max').value);
+            let xm = xMin + (sx / canvas.width) * (xMax - xMin), ym = yMin + ((canvas.height - sy) / canvas.height) * (yMax - yMin);
+
+            const overlay = document.getElementById('coordsOverlay');
+            overlay.style.display = 'block'; overlay.innerHTML = `X: ${xm.toFixed(3)}, Y: ${ym.toFixed(3)}`;
+            plot();
+
+            function drawCursorDot(expression, colorCode) {
+                try {
+                    let fn = new Function('x', 'PI', 'pi', 'E', 'e', 'w', 'omega', 'Omega', `with(Math) { return ${expression}; }`);
+                    let yValue = fn(xm, Math.PI, Math.PI, Math.E, Math.E, 1, 1, 1);
+                    if(!isNaN(yValue) && isFinite(yValue)) {
+                        let screenY = canvas.height - (((yValue - yMin) / (yMax - yMin)) * canvas.height);
+                        if(screenY >= 0 && screenY <= canvas.height) {
+                            ctx.fillStyle = colorCode; ctx.beginPath(); ctx.arc(sx, screenY, 6, 0, 2 * Math.PI); ctx.fill();
+                            ctx.fillStyle = '#ffffff'; ctx.font = 'bold 11px sans-serif'; ctx.fillText(`y=${yValue.toFixed(4)}`, sx + 8, screenY - 4);
+                        }
+                    }
+                } catch(ex){}
+            }
+            const f1 = document.getElementById('graph-f1').value.trim(); if(f1) drawCursorDot(f1, '#06b6d4');
+            const f2 = document.getElementById('graph-f2').value.trim(); if(f2) drawCursorDot(f2, '#f43f5e');
+        }
+    </script>
+</body>
+</html>
