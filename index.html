@@ -245,8 +245,16 @@
             <p><strong>Permitido:</strong> usar, copiar, estudiar y modificar libremente esta aplicación, siempre dando crédito a Agustín Diano como autor original de la idea.</p>
             <p><strong>Prohibido:</strong> vender esta aplicación o cualquier versión modificada de ella, o darle cualquier uso comercial (cobrar por su acceso, uso o distribución).</p>
             <p><strong>Si publicás una versión modificada:</strong> debe seguir siendo gratuita, mantener el crédito al autor original y compartirse bajo esta misma licencia (CC BY-NC-SA 4.0).</p>
-            <p class="muted">Texto legal completo de la licencia: <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/deed.es" target="_blank" rel="noopener" style="color: var(--cyan);">creativecommons.org/licenses/by-nc-sa/4.0</a>. Como este proyecto no está en un repositorio con archivo LICENSE, este aviso dentro de la propia app deja constancia de los términos, pero no reemplaza un registro formal de propiedad intelectual si en algún momento lo necesitás.</p>
-            <button class="btn btn-outline" onclick="toggleCopyrightModal(false)">Cerrar</button>
+            <p class="muted">Texto legal completo de la licencia: <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/deed.es" target="_blank" rel="noopener" style="color: var(--cyan);">creativecommons.org/licenses/by-nc-sa/4.0</a>. El código fuente completo está en <a href="https://github.com/GromGets/enginex-calc" target="_blank" rel="noopener" style="color: var(--cyan);">github.com/GromGets/enginex-calc</a>, con el archivo LICENSE correspondiente.</p>
+
+            <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border);">
+                <p class="muted" style="margin-bottom: 10px;">Versión instalada: <b id="installed-version-label" style="color: var(--text-main);"></b></p>
+                <button class="btn btn-outline" onclick="checkForUpdates(true)">🔄 Buscar actualizaciones</button>
+                <p id="update-check-status" style="font-size: 12px; color: var(--text-muted); margin-top: 10px; margin-bottom: 0;"></p>
+                <button class="btn btn-cyan" id="update-download-btn" style="display: none; margin-top: 10px;">⬇️ Descargar nueva versión</button>
+            </div>
+
+            <button class="btn btn-outline" style="margin-top: 16px;" onclick="toggleCopyrightModal(false)">Cerrar</button>
         </div>
     </div>
 
@@ -648,7 +656,60 @@
             handleGraphInputChange('graph-f1', 'f1-render');
             handleGraphInputChange('graph-f2', 'f2-render');
             document.getElementById('copyright-year').innerText = new Date().getFullYear();
+            document.getElementById('installed-version-label').innerText = APP_VERSION;
         };
+
+        // --- CHEQUEO DE ACTUALIZACIONES (vía GitHub Releases) ---
+        // El APK se distribuye fuera de Google Play, así que no hay auto-update nativo. Esto
+        // consulta la API pública de GitHub Releases, compara versiones, y si hay una más nueva
+        // abre el navegador del sistema para descargar el APK del release. Instalarlo sigue
+        // requiriendo el toque manual de "instalar" (Android lo exige por seguridad), pero evita
+        // tener que pedirme el archivo cada vez.
+        const APP_VERSION = '1.1.0';
+        const UPDATE_REPO = 'GromGets/enginex-calc';
+
+        function compareVersions(a, b) {
+            const pa = (a || '0').replace(/^v/i, '').split('.').map(n => parseInt(n, 10) || 0);
+            const pb = (b || '0').replace(/^v/i, '').split('.').map(n => parseInt(n, 10) || 0);
+            const len = Math.max(pa.length, pb.length);
+            for (let i = 0; i < len; i++) {
+                const na = pa[i] || 0, nb = pb[i] || 0;
+                if (na > nb) return 1;
+                if (na < nb) return -1;
+            }
+            return 0;
+        }
+
+        async function checkForUpdates(showUpToDateMessage) {
+            const statusEl = document.getElementById('update-check-status');
+            const downloadBtn = document.getElementById('update-download-btn');
+            downloadBtn.style.display = 'none';
+            statusEl.innerText = 'Buscando actualizaciones...';
+            try {
+                const res = await fetch(`https://api.github.com/repos/${UPDATE_REPO}/releases/latest`);
+                if (!res.ok) throw new Error('status ' + res.status);
+                const data = await res.json();
+                const latestVersion = data.tag_name || '0';
+                const apkAsset = (data.assets || []).find(a => a.name.toLowerCase().endsWith('.apk'));
+
+                if (compareVersions(latestVersion, APP_VERSION) > 0) {
+                    statusEl.innerHTML = `🆕 Nueva versión disponible: <b>${latestVersion}</b> (tenés ${APP_VERSION} instalada)`;
+                    if (apkAsset) {
+                        downloadBtn.style.display = 'inline-block';
+                        downloadBtn.onclick = () => confirmAndDownloadUpdate(apkAsset.browser_download_url, latestVersion);
+                    }
+                } else {
+                    statusEl.innerText = showUpToDateMessage ? `✅ Ya tenés la última versión (${APP_VERSION})` : '';
+                }
+            } catch (e) {
+                statusEl.innerText = '⚠ No se pudo verificar (revisá tu conexión a internet)';
+            }
+        }
+
+        function confirmAndDownloadUpdate(url, version) {
+            const ok = confirm(`¿Descargar la versión ${version}?\n\nSe va a abrir el navegador para bajar el APK. Cuando termine, abrí el archivo descargado y confirmá la instalación (Android lo pide siempre, por seguridad).`);
+            if (ok) window.open(url, '_system');
+        }
 
         function switchTab(tabId) {
             document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
