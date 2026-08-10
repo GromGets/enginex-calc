@@ -23,7 +23,7 @@
             }
         };
     </script>
-    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" async></script>
+    <script src="vendor/mathjax/tex-svg.js" async></script>
     
     <style>
         :root {
@@ -122,6 +122,18 @@
         .key-btn.key-prefix:hover { background-color: #1e293b; color: #fbbf24; }
         .key-btn.key-prefix-small { background-color: #0f172a; color: #06b6d4; border-color: #1e293b; }
         .key-btn.key-prefix-small:hover { background-color: #1e293b; color: #22d3ee; }
+        .key-btn.key-shift-on { background-color: #f59e0b !important; color: #1f2937 !important; border-color: #f59e0b !important; }
+        .key-btn.key-mode { background-color: #0f172a; color: #06b6d4; border-color: #1e293b; font-weight: 700; }
+
+        /* Scientific Calculator */
+        .calc-display-box { background-color: rgba(11, 19, 34, 0.7); border: 1px solid rgba(6, 182, 212, 0.2); border-radius: 6px; padding: 15px; margin-top: 5px; }
+        .calc-expr-preview { min-height: 36px; font-size: 18px; color: #e2e8f0; overflow-x: auto; justify-content: flex-start !important; text-align: left; }
+        .calc-result-main { font-size: 26px; font-weight: 700; color: var(--emerald); font-family: 'Courier New', monospace; word-break: break-word; }
+        .calc-result-sub { font-size: 13px; color: var(--text-muted); font-family: 'Courier New', monospace; margin-top: 4px; }
+        .calc-history-item { padding: 8px 12px; border-bottom: 1px solid var(--border); font-size: 12px; cursor: pointer; transition: background-color 0.2s; }
+        .calc-history-item:hover { background-color: rgba(51,65,85,0.5); }
+        .calc-history-expr { color: var(--text-muted); font-family: 'Courier New', monospace; }
+        .calc-history-result { color: var(--cyan); font-weight: 600; font-family: 'Courier New', monospace; margin-top: 2px; }
 
         /* Accordion Library */
         .eq-list { max-height: 320px; overflow-y: auto; margin-top: 10px; }
@@ -175,7 +187,11 @@
         /* Canvas Workspace */
         .canvas-container { position: relative; width: 100%; background-color: #0b0f19; border-radius: 8px; border: 1px solid var(--border); overflow: hidden; height: 520px; cursor: grab; }
         .canvas-container:active { cursor: grabbing; }
-        canvas { display: block; width: 100%; height: 100%; }
+        canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+        @media (max-width: 700px) {
+            .canvas-container { height: 380px; }
+            .coords-overlay { font-size: 11px; padding: 6px 9px; white-space: nowrap; }
+        }
         .graph-controls { display: flex; gap: 10px; margin-top: 12px; }
         .graph-control-col { flex: 1; }
         .coords-overlay { position: absolute; top: 15px; right: 15px; background-color: rgba(15, 23, 42, 0.9); border: 1px solid var(--border); padding: 8px 12px; border-radius: 4px; font-family: 'Courier New', monospace; font-size: 12px; color: var(--cyan); pointer-events: none; display: none; z-index: 10; }
@@ -206,7 +222,8 @@
         <div class="header-container">
             <div class="nav-tabs">
                 <button class="tab-btn active" onclick="switchTab('cientifica')">Ecuaciones & Despejador</button>
-                <button class="tab-btn" onclick="switchTab('grafica')">Graficadora Interactiva 2D</button>
+                <button class="tab-btn" onclick="switchTab('grafica')">Graficadora</button>
+                <button class="tab-btn" onclick="switchTab('calculadora')">Calculadora Científica</button>
             </div>
         </div>
     </header>
@@ -376,7 +393,7 @@
 
                     <div class="card" style="background-color: rgba(15, 23, 42, 0.6);">
                         <div class="card-title" style="border-left-color: var(--emerald);">📦 Variables</div>
-                        <div id="memory-list">
+                        <div id="memory-list" class="memory-list-container">
                             <p style="color: var(--text-muted); font-size: 13px; text-align: center; padding: 15px;">No hay variables guardadas. Calcula un valor arriba y presiona "Guardar".</p>
                         </div>
                     </div>
@@ -468,6 +485,103 @@
             </div>
         </div>
 
+        <div id="tab-calculadora" class="tab-content">
+            <div class="layout-row">
+
+                <div class="layout-col-left">
+                    <div class="card">
+                        <div class="card-title">🖩 Calculadora Científica</div>
+                        <div class="calc-display-box">
+                            <div class="latex-rendered calc-expr-preview" id="calc-preview">0</div>
+                            <input type="text" id="calc-expression-input" class="input-control" style="margin-top: 10px; font-size: 16px;" placeholder="Escribí o usá el teclado..." oninput="handleCalcInputChange()" onkeydown="if(event.key==='Enter'){ event.preventDefault(); calcEvaluate(); }">
+                            <div id="calc-result-zone" style="display: none; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border);">
+                                <div class="calc-result-main" id="calc-result-main"></div>
+                                <div class="calc-result-sub" id="calc-result-sub"></div>
+                            </div>
+                        </div>
+                        <button class="btn btn-outline" style="margin-top: 12px;" onclick="saveCalcResultToMemory()" id="calc-save-btn" disabled>💾 Guardar en Memoria</button>
+                        <p style="font-size: 11px; color: var(--text-muted); margin-top: 10px; line-height:1.5;">
+                            Números complejos: usá <code>i</code> (ej: <code>3+4i</code>). Coordenadas: <code>Pol(x,y)</code> y <code>Rec(r,θ)</code>. <code>Ans</code> = último resultado.
+                        </p>
+                    </div>
+
+                    <div class="card" style="background-color: rgba(15, 23, 42, 0.6);">
+                        <div class="card-title" style="border-left-color: var(--emerald);">📦 Variables</div>
+                        <div class="memory-list-container">
+                            <p style="color: var(--text-muted); font-size: 13px; text-align: center; padding: 15px;">No hay variables guardadas.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="layout-col-right">
+                    <div class="card">
+                        <div class="scientific-keyboard" id="calc-keyboard">
+                            <div class="key-btn key-prefix" id="calc-btn-shift" onclick="toggleCalcShift()" title="Segunda función (inversas)">SHIFT</div>
+                            <div class="key-btn key-mode" id="calc-btn-mode" onclick="cycleCalcAngleMode()" title="Modo de ángulo">DEG</div>
+                            <div class="key-btn key-clear" onclick="calcClear()">AC</div>
+                            <div class="key-btn key-clear" onclick="calcBackspace()">⌫</div>
+                            <div class="key-btn key-op" onclick="calcInsert('(')">(</div>
+                            <div class="key-btn key-op" onclick="calcInsert(')')">)</div>
+
+                            <div class="key-btn key-fn" id="calc-btn-sin" onclick="calcTrigButtonPress('sin')">sin</div>
+                            <div class="key-btn key-fn" id="calc-btn-cos" onclick="calcTrigButtonPress('cos')">cos</div>
+                            <div class="key-btn key-fn" id="calc-btn-tan" onclick="calcTrigButtonPress('tan')">tan</div>
+                            <div class="key-btn key-fn" onclick="calcInsert('sinh(')">sinh</div>
+                            <div class="key-btn key-fn" onclick="calcInsert('cosh(')">cosh</div>
+                            <div class="key-btn key-fn" onclick="calcInsert('tanh(')">tanh</div>
+
+                            <div class="key-btn key-fn" onclick="calcInsert('log(')">log</div>
+                            <div class="key-btn key-fn" onclick="calcInsert('ln(')">ln</div>
+                            <div class="key-btn key-fn" onclick="calcInsert('sqrt(')">√</div>
+                            <div class="key-btn key-fn" onclick="calcInsert('cbrt(')">∛</div>
+                            <div class="key-btn key-op" onclick="calcInsert('^2')">x²</div>
+                            <div class="key-btn key-op" onclick="calcInsert('^')">xʸ</div>
+
+                            <div class="key-btn key-op" onclick="calcInsert('pi')">π</div>
+                            <div class="key-btn key-op" onclick="calcInsert('e')">e</div>
+                            <div class="key-btn key-op" style="color:#f43f5e;" onclick="calcInsert('i')">i</div>
+                            <div class="key-btn key-prefix-small" onclick="calcInsert('Pol(')">Pol(</div>
+                            <div class="key-btn key-prefix-small" onclick="calcInsert('Rec(')">Rec(</div>
+                            <div class="key-btn key-fn" onclick="calcInsert('nthroot(')">ⁿ√</div>
+
+                            <div class="key-btn" onclick="calcInsert('7')">7</div>
+                            <div class="key-btn" onclick="calcInsert('8')">8</div>
+                            <div class="key-btn" onclick="calcInsert('9')">9</div>
+                            <div class="key-btn key-op" onclick="calcInsert('/')">÷</div>
+                            <div class="key-btn key-prefix-small" onclick="calcInsert('Ans')">Ans</div>
+                            <div class="key-btn key-op" onclick="calcInsert(',')">,</div>
+
+                            <div class="key-btn" onclick="calcInsert('4')">4</div>
+                            <div class="key-btn" onclick="calcInsert('5')">5</div>
+                            <div class="key-btn" onclick="calcInsert('6')">6</div>
+                            <div class="key-btn key-op" onclick="calcInsert('*')">×</div>
+                            <div class="key-btn key-op" onclick="calcToggleSign()">+/-</div>
+                            <div class="key-btn key-op" onclick="calcInsert('/100')">%</div>
+
+                            <div class="key-btn" onclick="calcInsert('1')">1</div>
+                            <div class="key-btn" onclick="calcInsert('2')">2</div>
+                            <div class="key-btn" onclick="calcInsert('3')">3</div>
+                            <div class="key-btn key-op" onclick="calcInsert('-')">−</div>
+                            <div class="key-btn key-op" onclick="calcInsert('+')">+</div>
+                            <div class="key-btn key-action" onclick="saveCalcResultToMemory()" title="Guardar resultado en memoria">💾M</div>
+
+                            <div class="key-btn" style="grid-column: span 3;" onclick="calcInsert('0')">0</div>
+                            <div class="key-btn" onclick="calcInsert('.')">.</div>
+                            <div class="key-btn key-action" style="grid-column: span 2;" onclick="calcEvaluate()">=</div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-title" style="border-left-color: var(--cyan);">🕐 Historial</div>
+                        <div class="eq-list" id="calc-history-list">
+                            <p style="color: var(--text-muted); font-size: 13px; text-align: center; padding: 15px;">Sin cálculos todavía.</p>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
     </div>
 
     <script>
@@ -511,6 +625,13 @@
         let lastCalculatedRoots = [];
         let lastCalculatedName = "";
 
+        // Scientific Calculator State
+        let calcShiftActive = false;
+        let calcAngleMode = 'DEG';
+        let calcHistory = [];
+        let calcLastResultFormatted = null;
+        let calcResultCounter = 0;
+
         // Editing State
         let editingEqId = null;
         let editingEqIsCustom = false;
@@ -534,7 +655,7 @@
             document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
             document.getElementById('tab-' + tabId).classList.add('active');
             event.currentTarget.classList.add('active');
-            if(tabId === 'grafica') { setTimeout(plot, 30); evaluateGraphX(); }
+            if(tabId === 'grafica') { setTimeout(() => { resizeCanvasToDisplaySize(); plot(); }, 30); evaluateGraphX(); }
         }
 
         function toggleSettings() {
@@ -561,14 +682,14 @@
         // la barra invertida), duplicando la barra a "\\pi" — que MathJax interpreta como el
         // comando de salto de línea "\\" seguido del texto literal "pi", no como el símbolo π.
         // Parsear a un árbol real y volver a imprimirlo evita ese tipo de colisión por completo.
-        function convertComputationalToLatex(expression) {
+        function convertComputationalToLatex(expression, prefix = 'f(x) = ') {
             if (!expression) return '';
             const trimmed = expression.trim();
             if (!trimmed) return '';
             if (trimmed.includes('$$') || trimmed.includes('\\')) return trimmed;
             try {
                 const ast = parseExprTokens(tokenizeExpr(trimmed));
-                return '$$f(x) = ' + astToSymbolicLatex(ast, 0) + '$$';
+                return '$$' + prefix + astToSymbolicLatex(ast, 0) + '$$';
             } catch (e) {
                 return trimmed;
             }
@@ -674,7 +795,7 @@
 
             let toRender;
             if (options.computational) {
-                toRender = convertComputationalToLatex(text);
+                toRender = convertComputationalToLatex(text, options.latexPrefix !== undefined ? options.latexPrefix : 'f(x) = ');
             } else {
                 toRender = (text.includes('$')) ? text : ('$$' + text + '$$');
             }
@@ -938,6 +1059,13 @@
                         if (str[k] === '+' || str[k] === '-') k++;
                         if (/[0-9]/.test(str[k])) { while (k < str.length && /[0-9]/.test(str[k])) k++; j = k; }
                     }
+                    // Sufijo "i" pegado al número (ej. "4i", "3.5i") = literal imaginario puro.
+                    // Se exige que no siga otra letra/dígito, para no confundir con un identificador
+                    // como "4in" (que de todos modos no es válido, pero evita falsos positivos).
+                    if (str[j] === 'i' && !/[a-zA-Z0-9_]/.test(str[j + 1] || '')) {
+                        tokens.push({ type: 'imagnum', value: parseFloat(str.slice(i, j)) });
+                        i = j + 1; continue;
+                    }
                     tokens.push({ type: 'num', value: parseFloat(str.slice(i, j)) });
                     i = j; continue;
                 }
@@ -948,6 +1076,7 @@
                     i = j; continue;
                 }
                 if (c === '*' && str[i + 1] === '*') { tokens.push({ type: 'op', value: '**' }); i += 2; continue; }
+                if (c === '^') { tokens.push({ type: 'op', value: '**' }); i++; continue; }
                 if ('+-*/(),'.includes(c)) { tokens.push({ type: c === ',' ? 'comma' : (c === '(' ? 'lparen' : (c === ')' ? 'rparen' : 'op')), value: c }); i++; continue; }
                 if (c === '=') { tokens.push({ type: 'eq', value: '=' }); i++; continue; }
                 throw new Error('Carácter inesperado: ' + c);
@@ -993,6 +1122,7 @@
                 const t = peek();
                 if (!t) throw new Error('Expresión incompleta');
                 if (t.type === 'num') { eat('num'); return { type: 'num', value: t.value }; }
+                if (t.type === 'imagnum') { eat('imagnum'); return { type: 'imagnum', value: t.value }; }
                 if (t.type === 'lparen') { eat('lparen'); const n = parseAdd(); eat('rparen'); return n; }
                 if (t.type === 'ident') {
                     eat('ident');
@@ -1107,15 +1237,25 @@
 
         function callToSymbolicLatex(node) {
             const a = node.args.map(x => astToSymbolicLatex(x, 0));
-            const wraps = { ln: '\\ln', log: '\\log', log10: '\\log_{10}', sin: '\\sin', cos: '\\cos', tan: '\\tan', asin: '\\sin^{-1}', acos: '\\cos^{-1}', atan: '\\tan^{-1}' };
+            const wraps = {
+                ln: '\\ln', log: '\\log', log10: '\\log_{10}', sin: '\\sin', cos: '\\cos', tan: '\\tan',
+                asin: '\\sin^{-1}', acos: '\\cos^{-1}', atan: '\\tan^{-1}',
+                sinh: '\\sinh', cosh: '\\cosh', tanh: '\\tanh',
+                asinh: '\\sinh^{-1}', acosh: '\\cosh^{-1}', atanh: '\\tanh^{-1}'
+            };
             if (node.fn === 'sqrt') return `\\sqrt{${a[0]}}`;
+            if (node.fn === 'cbrt') return `\\sqrt[3]{${a[0]}}`;
+            if (node.fn === 'nthroot' && a.length === 2) return `\\sqrt[${a[0]}]{${a[1]}}`;
             if (node.fn === 'exp') return `e^{${a[0]}}`;
+            if (node.fn === 'Pol' && a.length === 2) return `\\text{Pol}(${a[0]}, ${a[1]})`;
+            if (node.fn === 'Rec' && a.length === 2) return `\\text{Rec}(${a[0]}, ${a[1]})`;
             if (wraps[node.fn]) return `${wraps[node.fn]}\\left(${a[0]}\\right)`;
             return `\\text{${node.fn}}\\left(${a.join(', ')}\\right)`;
         }
 
         function astToSymbolicLatex(node, parentPrec) {
             if (node.type === 'num') return formatSymbolicNumber(node.value);
+            if (node.type === 'imagnum') return formatSymbolicNumber(node.value) + 'i';
             if (node.type === 'var') return prettifyVarNameLatex(node.name);
             if (node.type === 'neg') return `-${astToSymbolicLatex(node.arg, 2.5)}`;
             if (node.type === 'call') return callToSymbolicLatex(node);
@@ -1155,6 +1295,317 @@
             box.style.display = 'block';
             const latex = `$$${prettifyVarNameLatex(targetVar)} = ${astToSymbolicLatex(solvedAst, 0)}$$`;
             renderLatexPreview(latex, 'solved-formula-render', { emptyMessage: '' });
+        }
+
+        // --- MOTOR DE NÚMEROS COMPLEJOS (Calculadora Científica) ---
+        // Reutiliza tokenizeExpr/parseExprTokens (el mismo parser del despejador) para leer la
+        // expresión, y evalúa el árbol numéricamente sobre Complex en vez de JS nativo, porque
+        // JS no tiene aritmética compleja incorporada.
+        class Complex {
+            constructor(re, im = 0) { this.re = re; this.im = im; }
+            add(o) { return new Complex(this.re + o.re, this.im + o.im); }
+            sub(o) { return new Complex(this.re - o.re, this.im - o.im); }
+            mul(o) { return new Complex(this.re * o.re - this.im * o.im, this.re * o.im + this.im * o.re); }
+            div(o) {
+                const d = o.re * o.re + o.im * o.im;
+                if (d === 0) throw new Error('División por cero');
+                return new Complex((this.re * o.re + this.im * o.im) / d, (this.im * o.re - this.re * o.im) / d);
+            }
+            // El "? 0 :" evita que -0 aparezca al negar un componente en 0 — JS distingue
+            // +0 de -0, y Math.atan2(-0, x negativo) toma la rama opuesta a atan2(+0, x
+            // negativo), lo que rompía sqrt/pow de reales negativos (ej. sqrt(-1) daba -i en
+            // vez de +i).
+            neg() { return new Complex(this.re === 0 ? 0 : -this.re, this.im === 0 ? 0 : -this.im); }
+            conj() { return new Complex(this.re, -this.im); }
+            abs() { return Math.hypot(this.re, this.im); }
+            arg() { return Math.atan2(this.im === 0 ? 0 : this.im, this.re); }
+        }
+
+        function complexExp(z) { const r = Math.exp(z.re); return new Complex(r * Math.cos(z.im), r * Math.sin(z.im)); }
+        function complexLn(z) {
+            if (z.re === 0 && z.im === 0) throw new Error('ln(0) no está definido');
+            return new Complex(Math.log(z.abs()), z.arg());
+        }
+        function complexSqrt(z) { const r = Math.sqrt(z.abs()), t = z.arg() / 2; return new Complex(r * Math.cos(t), r * Math.sin(t)); }
+        function complexSin(z) { return new Complex(Math.sin(z.re) * Math.cosh(z.im), Math.cos(z.re) * Math.sinh(z.im)); }
+        function complexCos(z) { return new Complex(Math.cos(z.re) * Math.cosh(z.im), -Math.sin(z.re) * Math.sinh(z.im)); }
+        function complexTan(z) { return complexSin(z).div(complexCos(z)); }
+        function complexSinh(z) { return new Complex(Math.sinh(z.re) * Math.cos(z.im), Math.cosh(z.re) * Math.sin(z.im)); }
+        function complexCosh(z) { return new Complex(Math.cosh(z.re) * Math.cos(z.im), Math.sinh(z.re) * Math.sin(z.im)); }
+        function complexTanh(z) { return complexSinh(z).div(complexCosh(z)); }
+
+        const COMPLEX_I = new Complex(0, 1);
+        function complexAsin(z) { return COMPLEX_I.neg().mul(complexLn(COMPLEX_I.mul(z).add(complexSqrt(new Complex(1, 0).sub(z.mul(z)))))); }
+        function complexAcos(z) { return new Complex(Math.PI / 2, 0).sub(complexAsin(z)); }
+        function complexAtan(z) { return COMPLEX_I.div(new Complex(2, 0)).mul(complexLn(COMPLEX_I.sub(z).div(COMPLEX_I.add(z)))); }
+        function complexAsinh(z) { return complexLn(z.add(complexSqrt(z.mul(z).add(new Complex(1, 0))))); }
+        function complexAcosh(z) { return complexLn(z.add(complexSqrt(z.mul(z).sub(new Complex(1, 0))))); }
+        function complexAtanh(z) { return complexLn(new Complex(1, 0).add(z).div(new Complex(1, 0).sub(z))).div(new Complex(2, 0)); }
+
+        function complexPow(base, exp) {
+            if (exp.im === 0 && Number.isInteger(exp.re) && Math.abs(exp.re) <= 1000) {
+                const n = exp.re;
+                if (n === 0) return new Complex(1, 0);
+                const useBase = n < 0 ? new Complex(1, 0).div(base) : base;
+                let result = new Complex(1, 0);
+                for (let k = 0; k < Math.abs(n); k++) result = result.mul(useBase);
+                return result;
+            }
+            if (base.re === 0 && base.im === 0) {
+                if (exp.re > 0 && exp.im === 0) return new Complex(0, 0);
+                throw new Error('0 elevado a ese exponente no está definido');
+            }
+            return complexExp(exp.mul(complexLn(base)));
+        }
+
+        function calcToRad(x, mode) { return mode === 'DEG' ? x * Math.PI / 180 : mode === 'GRAD' ? x * Math.PI / 200 : x; }
+        function calcFromRad(x, mode) { return mode === 'DEG' ? x * 180 / Math.PI : mode === 'GRAD' ? x * 200 / Math.PI : x; }
+        function scaleComplexAngle(z, mode) { const f = mode === 'DEG' ? Math.PI / 180 : mode === 'GRAD' ? Math.PI / 200 : 1; return new Complex(z.re * f, z.im * f); }
+        function unscaleComplexAngle(z, mode) { const f = mode === 'DEG' ? 180 / Math.PI : mode === 'GRAD' ? 200 / Math.PI : 1; return new Complex(z.re * f, z.im * f); }
+
+        function applyComplexFunction(name, args, mode) {
+            switch (name) {
+                case 'sin': return complexSin(scaleComplexAngle(args[0], mode));
+                case 'cos': return complexCos(scaleComplexAngle(args[0], mode));
+                case 'tan': return complexTan(scaleComplexAngle(args[0], mode));
+                case 'asin': return unscaleComplexAngle(complexAsin(args[0]), mode);
+                case 'acos': return unscaleComplexAngle(complexAcos(args[0]), mode);
+                case 'atan': return unscaleComplexAngle(complexAtan(args[0]), mode);
+                case 'sinh': return complexSinh(args[0]);
+                case 'cosh': return complexCosh(args[0]);
+                case 'tanh': return complexTanh(args[0]);
+                case 'asinh': return complexAsinh(args[0]);
+                case 'acosh': return complexAcosh(args[0]);
+                case 'atanh': return complexAtanh(args[0]);
+                case 'exp': return complexExp(args[0]);
+                case 'ln': return complexLn(args[0]);
+                case 'log': case 'log10': return complexLn(args[0]).div(new Complex(Math.LN10, 0));
+                case 'sqrt': return complexSqrt(args[0]);
+                case 'cbrt': return complexPow(args[0], new Complex(1 / 3, 0));
+                case 'nthroot':
+                    if (args.length !== 2) throw new Error('nthroot necesita 2 argumentos: nthroot(n, x)');
+                    return complexPow(args[1], new Complex(1, 0).div(args[0]));
+                case 'abs': return new Complex(args[0].abs(), 0);
+                case 'arg': return new Complex(calcFromRad(args[0].arg(), mode), 0);
+                case 'conj': return args[0].conj();
+                case 're': return new Complex(args[0].re, 0);
+                case 'im': return new Complex(args[0].im, 0);
+                case 'Pol': {
+                    if (args.length !== 2) throw new Error('Pol necesita 2 argumentos: Pol(x, y)');
+                    const x = args[0].re, y = args[1].re;
+                    return { isPolarPair: true, r: Math.hypot(x, y), theta: calcFromRad(Math.atan2(y, x), mode) };
+                }
+                case 'Rec': {
+                    if (args.length !== 2) throw new Error('Rec necesita 2 argumentos: Rec(r, theta)');
+                    const r = args[0].re, thetaRad = calcToRad(args[1].re, mode);
+                    return { isRectPair: true, x: r * Math.cos(thetaRad), y: r * Math.sin(thetaRad) };
+                }
+                default: throw new Error('Función desconocida: ' + name);
+            }
+        }
+
+        let calcLastAnswer = new Complex(0, 0);
+
+        function evalComplexAst(node, mode) {
+            switch (node.type) {
+                case 'num': return new Complex(node.value, 0);
+                case 'imagnum': return new Complex(0, node.value);
+                case 'var': {
+                    const nm = node.name;
+                    if (nm === 'pi' || nm === 'PI') return new Complex(Math.PI, 0);
+                    if (nm === 'e' || nm === 'E') return new Complex(Math.E, 0);
+                    if (nm === 'i' || nm === 'j') return new Complex(0, 1);
+                    if (nm === 'Ans') return calcLastAnswer;
+                    throw new Error('Variable desconocida: ' + nm);
+                }
+                case 'neg': return evalComplexAst(node.arg, mode).neg();
+                case 'bin': {
+                    const l = evalComplexAst(node.left, mode), r = evalComplexAst(node.right, mode);
+                    switch (node.op) {
+                        case '+': return l.add(r);
+                        case '-': return l.sub(r);
+                        case '*': return l.mul(r);
+                        case '/': return l.div(r);
+                        case '**': return complexPow(l, r);
+                        default: throw new Error('Operador no soportado: ' + node.op);
+                    }
+                }
+                case 'call': return applyComplexFunction(node.fn, node.args.map(a => evalComplexAst(a, mode)), mode);
+                default: throw new Error('Nodo no soportado');
+            }
+        }
+
+        function formatCalcNumber(value) {
+            if (!isFinite(value)) return isNaN(value) ? 'Error' : (value > 0 ? '∞' : '-∞');
+            const abs = Math.abs(value);
+            if (abs !== 0 && abs < 1e-9) return '0';
+            if (abs !== 0 && (abs < 1e-4 || abs > 1e10)) return value.toExponential(6);
+            let s = value.toFixed(6).replace(/\.?0+$/, '');
+            return s === '' || s === '-' ? '0' : s;
+        }
+
+        function formatComplexResult(result, mode) {
+            const angleUnit = mode === 'DEG' ? '°' : (mode === 'GRAD' ? ' grad' : ' rad');
+            if (result && result.isPolarPair) {
+                return { main: `r = ${formatCalcNumber(result.r)}`, sub: `θ = ${formatCalcNumber(result.theta)}${angleUnit}`, insertText: formatCalcNumber(result.r) };
+            }
+            if (result && result.isRectPair) {
+                return { main: `x = ${formatCalcNumber(result.x)}`, sub: `y = ${formatCalcNumber(result.y)}`, insertText: formatCalcNumber(result.x) };
+            }
+            const reZero = Math.abs(result.re) < 1e-9, imZero = Math.abs(result.im) < 1e-9;
+            let mainText, insertExpr;
+            if (imZero) { mainText = formatCalcNumber(result.re); insertExpr = mainText; }
+            else if (reZero) { mainText = `${formatCalcNumber(result.im)}i`; insertExpr = `(${mainText})`; }
+            else {
+                const sign = result.im < 0 ? '-' : '+';
+                mainText = `${formatCalcNumber(result.re)} ${sign} ${formatCalcNumber(Math.abs(result.im))}i`;
+                // Sin espacios y entre paréntesis: reinsertar esto dentro de otra expresión (ej. "2*" + esto)
+                // no debe romper la precedencia de operadores.
+                insertExpr = `(${formatCalcNumber(result.re)}${sign}${formatCalcNumber(Math.abs(result.im))}i)`;
+            }
+            let subText = '';
+            if (!imZero) subText = `r = ${formatCalcNumber(result.abs())}, θ = ${formatCalcNumber(calcFromRad(result.arg(), mode))}${angleUnit}`;
+            return { main: mainText, sub: subText, insertText: insertExpr };
+        }
+
+        // --- SCIENTIFIC CALCULATOR UI GLUE ---
+        function calcInsert(text, cursorOffsetFromEnd) {
+            const input = document.getElementById('calc-expression-input');
+            const start = input.selectionStart !== null ? input.selectionStart : input.value.length;
+            const end = input.selectionEnd !== null ? input.selectionEnd : input.value.length;
+            input.value = input.value.substring(0, start) + text + input.value.substring(end);
+            const insertedEnd = start + text.length;
+            input.selectionStart = input.selectionEnd = cursorOffsetFromEnd ? (insertedEnd - cursorOffsetFromEnd) : insertedEnd;
+            input.focus();
+            handleCalcInputChange();
+        }
+
+        function calcBackspace() {
+            const input = document.getElementById('calc-expression-input');
+            const start = input.selectionStart || 0, end = input.selectionEnd || 0;
+            if (start === end && start > 0) {
+                input.value = input.value.substring(0, start - 1) + input.value.substring(end);
+                input.selectionStart = input.selectionEnd = start - 1;
+            } else if (start !== end) {
+                input.value = input.value.substring(0, start) + input.value.substring(end);
+                input.selectionStart = input.selectionEnd = start;
+            }
+            input.focus();
+            handleCalcInputChange();
+        }
+
+        function calcClear() {
+            const input = document.getElementById('calc-expression-input');
+            input.value = '';
+            input.focus();
+            handleCalcInputChange();
+            document.getElementById('calc-result-zone').style.display = 'none';
+            document.getElementById('calc-save-btn').disabled = true;
+        }
+
+        function calcToggleSign() {
+            const input = document.getElementById('calc-expression-input');
+            const val = input.value;
+            const match = val.match(/(-?\d*\.?\d+)$/);
+            if (match) {
+                const numStr = match[1];
+                const start = val.length - numStr.length;
+                const newNum = numStr.startsWith('-') ? numStr.slice(1) : '-' + numStr;
+                input.value = val.slice(0, start) + newNum;
+            } else {
+                input.value = val + '-';
+            }
+            input.focus();
+            handleCalcInputChange();
+        }
+
+        function handleCalcInputChange() {
+            const input = document.getElementById('calc-expression-input');
+            renderLatexPreview(input.value, 'calc-preview', { computational: true, latexPrefix: '', emptyMessage: '0' });
+        }
+
+        function toggleCalcShift() {
+            calcShiftActive = !calcShiftActive;
+            document.getElementById('calc-btn-shift').classList.toggle('key-shift-on', calcShiftActive);
+            document.getElementById('calc-btn-sin').innerText = calcShiftActive ? 'sin⁻¹' : 'sin';
+            document.getElementById('calc-btn-cos').innerText = calcShiftActive ? 'cos⁻¹' : 'cos';
+            document.getElementById('calc-btn-tan').innerText = calcShiftActive ? 'tan⁻¹' : 'tan';
+        }
+
+        function calcTrigButtonPress(fn) {
+            const wasShift = calcShiftActive;
+            calcInsert((wasShift ? 'a' + fn : fn) + '(');
+            if (wasShift) toggleCalcShift(); // el SHIFT se consume tras un uso, como en una calculadora real
+        }
+
+        function cycleCalcAngleMode() {
+            calcAngleMode = calcAngleMode === 'DEG' ? 'RAD' : (calcAngleMode === 'RAD' ? 'GRAD' : 'DEG');
+            document.getElementById('calc-btn-mode').innerText = calcAngleMode;
+        }
+
+        function calcEvaluate() {
+            const input = document.getElementById('calc-expression-input');
+            const raw = input.value.trim();
+            if (!raw) return;
+            const mainEl = document.getElementById('calc-result-main');
+            const subEl = document.getElementById('calc-result-sub');
+            document.getElementById('calc-result-zone').style.display = 'block';
+            try {
+                const ast = parseExprTokens(tokenizeExpr(raw));
+                const result = evalComplexAst(ast, calcAngleMode);
+                const formatted = formatComplexResult(result, calcAngleMode);
+
+                mainEl.innerText = formatted.main;
+                mainEl.style.color = 'var(--emerald)';
+                subEl.innerText = formatted.sub;
+                document.getElementById('calc-save-btn').disabled = false;
+
+                calcLastAnswer = (result && (result.isPolarPair || result.isRectPair))
+                    ? new Complex(result.isPolarPair ? result.r : result.x, 0)
+                    : result;
+                calcLastResultFormatted = formatted;
+
+                calcHistory.unshift({ expr: raw, resultText: formatted.main });
+                if (calcHistory.length > 30) calcHistory.pop();
+                renderCalcHistory();
+            } catch (e) {
+                mainEl.innerText = '⚠ ' + e.message;
+                mainEl.style.color = 'var(--rose)';
+                subEl.innerText = '';
+                document.getElementById('calc-save-btn').disabled = true;
+            }
+        }
+
+        function saveCalcResultToMemory() {
+            if (!calcLastResultFormatted) return;
+            calcResultCounter++;
+            savedVariables.push({
+                id: Date.now(),
+                name: 'Calc_' + calcResultCounter,
+                val: calcLastAnswer.re,
+                display: calcLastResultFormatted.main,
+                insertText: calcLastResultFormatted.insertText
+            });
+            renderMemoryList();
+        }
+
+        function renderCalcHistory() {
+            const container = document.getElementById('calc-history-list');
+            if (calcHistory.length === 0) {
+                container.innerHTML = '<p style="color: var(--text-muted); font-size: 13px; text-align: center; padding: 15px;">Sin cálculos todavía.</p>';
+                return;
+            }
+            container.innerHTML = '';
+            calcHistory.forEach((h) => {
+                const div = document.createElement('div');
+                div.className = 'calc-history-item';
+                div.onclick = () => {
+                    document.getElementById('calc-expression-input').value = h.expr;
+                    handleCalcInputChange();
+                };
+                div.innerHTML = `<div class="calc-history-expr">${h.expr}</div><div class="calc-history-result">= ${h.resultText}</div>`;
+                container.appendChild(div);
+            });
         }
 
         // --- COMPUTATIONAL ROOT SOLVER ---
@@ -1392,84 +1843,192 @@
         }
 
         function renderMemoryList() {
-            const container = document.getElementById('memory-list');
-            if(savedVariables.length === 0) {
-                container.innerHTML = '<p style="color: var(--text-muted); font-size: 13px; text-align: center; padding: 15px;">No hay variables guardadas. Calcula un valor arriba y presiona "Guardar".</p>';
-                return;
-            }
-            
-            container.innerHTML = '';
-            savedVariables.forEach(v => {
-                const row = document.createElement('div');
-                row.className = "memory-item";
-                
-                // Formateo visual del numero para la lista
-                let displayVal = Math.abs(v.val) > 1e5 || (Math.abs(v.val) > 0 && Math.abs(v.val) < 1e-3) 
-                                 ? v.val.toExponential(4) 
-                                 : v.val.toFixed(4).replace(/\.?0+$/, "");
+            const containers = document.querySelectorAll('.memory-list-container');
+            containers.forEach(container => {
+                if(savedVariables.length === 0) {
+                    container.innerHTML = '<p style="color: var(--text-muted); font-size: 13px; text-align: center; padding: 15px;">No hay variables guardadas. Calcula un valor y presioná "Guardar".</p>';
+                    return;
+                }
 
-                row.innerHTML = `
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        <input type="text" value="${v.name}" onchange="updateMemoryName(${v.id}, this.value)" title="Haz clic para renombrar la variable">
-                        <span style="color: var(--text-muted); font-size: 14px;">=</span>
-                        <span style="font-family: monospace; color: var(--emerald); font-weight: bold; font-size: 15px; margin-left: 5px;">${displayVal}</span>
-                    </div>
-                    <button class="delete-eq-btn" style="position: static; opacity: 1; font-size: 14px;" onclick="deleteMemory(${v.id})" title="Borrar variable">❌</button>
-                `;
-                container.appendChild(row);
+                container.innerHTML = '';
+                savedVariables.forEach(v => {
+                    const row = document.createElement('div');
+                    row.className = "memory-item";
+
+                    // Si viene con texto de formato propio (ej. resultado complejo), se usa tal cual;
+                    // si no, se formatea el número igual que antes.
+                    let displayVal = v.display !== undefined ? v.display :
+                        (Math.abs(v.val) > 1e5 || (Math.abs(v.val) > 0 && Math.abs(v.val) < 1e-3)
+                            ? v.val.toExponential(4)
+                            : v.val.toFixed(4).replace(/\.?0+$/, ""));
+
+                    row.innerHTML = `
+                        <div style="display: flex; align-items: center; gap: 8px; cursor: pointer;" onclick="insertMemoryValueIntoActiveInput(${v.id})" title="Click para insertar este valor donde estés escribiendo">
+                            <input type="text" value="${v.name}" onclick="event.stopPropagation()" onchange="updateMemoryName(${v.id}, this.value)" title="Haz clic para renombrar la variable">
+                            <span style="color: var(--text-muted); font-size: 14px;">=</span>
+                            <span style="font-family: monospace; color: var(--emerald); font-weight: bold; font-size: 15px; margin-left: 5px;">${displayVal}</span>
+                        </div>
+                        <button class="delete-eq-btn" style="position: static; opacity: 1; font-size: 14px;" onclick="event.stopPropagation(); deleteMemory(${v.id})" title="Borrar variable">❌</button>
+                    `;
+                    container.appendChild(row);
+                });
             });
         }
 
+        function insertMemoryValueIntoActiveInput(id) {
+            const v = savedVariables.find(x => x.id === id);
+            if (!v) return;
+            const text = v.insertText !== undefined ? v.insertText : String(v.val);
+            if (lastFocusedInput && lastFocusedInput.id && lastFocusedInput.id.startsWith('calc-')) {
+                calcInsert(text);
+            } else {
+                insertLatex(text);
+            }
+        }
+
         // --- CANVAS INTERACTIVE GRAPH ENGINE ---
+        // logicalWidth/logicalHeight son el tamaño del canvas en pixeles CSS (lo que realmente
+        // ocupa en pantalla). canvas.width/canvas.height son la resolución interna en pixeles
+        // físicos (logicalWidth * devicePixelRatio), y el contexto se escala con setTransform
+        // para que todo el código de dibujo pueda seguir trabajando en coordenadas lógicas.
+        // Sin esto, en el celular el canvas quedaba con una resolución interna fija (900x520)
+        // estirada para llenar un contenedor angosto, deformando todo el dibujo.
         let canvas, ctx, isDragging = false, startX, startY, initialXMin, initialXMax, initialYMin, initialYMax;
+        let logicalWidth = 900, logicalHeight = 520;
+        let touchStartDist = 0, pinchInitialBounds = null, touchMidPoint = { x: 0, y: 0 };
+        let tapStartPos = null, tapMoved = false;
+
+        function resizeCanvasToDisplaySize() {
+            if (!canvas) return;
+            const rect = canvas.getBoundingClientRect();
+            if (rect.width <= 0 || rect.height <= 0) return;
+            const dpr = window.devicePixelRatio || 1;
+            logicalWidth = rect.width;
+            logicalHeight = rect.height;
+            canvas.width = Math.round(logicalWidth * dpr);
+            canvas.height = Math.round(logicalHeight * dpr);
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        }
+
+        function getTouchDistance(t1, t2) {
+            return Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
+        }
+
+        function startPan(clientX, clientY) {
+            isDragging = true; startX = clientX; startY = clientY;
+            initialXMin = parseFloat(document.getElementById('xlim-min').value);
+            initialXMax = parseFloat(document.getElementById('xlim-max').value);
+            initialYMin = parseFloat(document.getElementById('ylim-min').value);
+            initialYMax = parseFloat(document.getElementById('ylim-max').value);
+        }
+
+        function applyPan(clientX, clientY) {
+            const dx = clientX - startX, dy = clientY - startY;
+            const rect = canvas.getBoundingClientRect();
+            const xShift = -(dx / rect.width) * (initialXMax - initialXMin);
+            const yShift = (dy / rect.height) * (initialYMax - initialYMin);
+            document.getElementById('xlim-min').value = (initialXMin + xShift).toFixed(4);
+            document.getElementById('xlim-max').value = (initialXMax + xShift).toFixed(4);
+            document.getElementById('ylim-min').value = (initialYMin + yShift).toFixed(4);
+            document.getElementById('ylim-max').value = (initialYMax + yShift).toFixed(4);
+            plot();
+            document.getElementById('coordsOverlay').style.display = 'none';
+        }
+
+        function applyZoomAtPoint(rectX, rectY, zoomFactor, bounds) {
+            const rect = canvas.getBoundingClientRect();
+            const { xMin, xMax, yMin, yMax } = bounds;
+            const xPos = xMin + (rectX / rect.width) * (xMax - xMin);
+            const yPos = yMin + ((rect.height - rectY) / rect.height) * (yMax - yMin);
+            document.getElementById('xlim-min').value = (xPos - (xPos - xMin) * zoomFactor).toFixed(4);
+            document.getElementById('xlim-max').value = (xPos + (xMax - xPos) * zoomFactor).toFixed(4);
+            document.getElementById('ylim-min').value = (yPos - (yPos - yMin) * zoomFactor).toFixed(4);
+            document.getElementById('ylim-max').value = (yPos + (yMax - yPos) * zoomFactor).toFixed(4);
+            plot();
+        }
 
         function initGraph() {
             canvas = document.getElementById('graphCanvas');
             ctx = canvas.getContext('2d');
-            
-            canvas.addEventListener('mousedown', (e) => {
-                isDragging = true; startX = e.clientX; startY = e.clientY;
-                initialXMin = parseFloat(document.getElementById('xlim-min').value);
-                initialXMax = parseFloat(document.getElementById('xlim-max').value);
-                initialYMin = parseFloat(document.getElementById('ylim-min').value);
-                initialYMax = parseFloat(document.getElementById('ylim-max').value);
-            });
+            resizeCanvasToDisplaySize();
+
+            window.addEventListener('resize', () => { resizeCanvasToDisplaySize(); plot(); });
+
+            // --- Mouse (desktop) ---
+            canvas.addEventListener('mousedown', (e) => startPan(e.clientX, e.clientY));
             window.addEventListener('mouseup', () => { isDragging = false; });
-
             canvas.addEventListener('mousemove', (e) => {
-                if (isDragging) {
-                    let dx = e.clientX - startX, dy = e.clientY - startY;
-                    let rect = canvas.getBoundingClientRect();
-                    let xShift = -(dx / rect.width) * (initialXMax - initialXMin);
-                    let yShift = (dy / rect.height) * (initialYMax - initialYMin);
-                    document.getElementById('xlim-min').value = (initialXMin + xShift).toFixed(4);
-                    document.getElementById('xlim-max').value = (initialXMax + xShift).toFixed(4);
-                    document.getElementById('ylim-min').value = (initialYMin + yShift).toFixed(4);
-                    document.getElementById('ylim-max').value = (initialYMax + yShift).toFixed(4);
-                    plot();
-                    document.getElementById('coordsOverlay').style.display = 'none';
-                } else { processGraphHover(e); }
+                if (isDragging) applyPan(e.clientX, e.clientY);
+                else processGraphHover(e.clientX, e.clientY, false);
             });
-
             canvas.addEventListener('wheel', (e) => {
                 e.preventDefault();
                 const rect = canvas.getBoundingClientRect();
-                const mouseX = e.clientX - rect.left, mouseY = e.clientY - rect.top;
-                let xMin = parseFloat(document.getElementById('xlim-min').value), xMax = parseFloat(document.getElementById('xlim-max').value);
-                let yMin = parseFloat(document.getElementById('ylim-min').value), yMax = parseFloat(document.getElementById('ylim-max').value);
                 const zoomFactor = e.deltaY > 0 ? 1.15 : 0.85;
-
-                let xPos = xMin + (mouseX / rect.width) * (xMax - xMin);
-                document.getElementById('xlim-min').value = (xPos - (xPos - xMin) * zoomFactor).toFixed(4);
-                document.getElementById('xlim-max').value = (xPos + (xMax - xPos) * zoomFactor).toFixed(4);
-
-                let yPos = yMin + ((rect.height - mouseY) / rect.height) * (yMax - yMin);
-                document.getElementById('ylim-min').value = (yPos - (yPos - yMin) * zoomFactor).toFixed(4);
-                document.getElementById('ylim-max').value = (yPos + (yMax - yPos) * zoomFactor).toFixed(4);
-                plot();
-            }, {passive: false});
-
+                applyZoomAtPoint(e.clientX - rect.left, e.clientY - rect.top, zoomFactor, {
+                    xMin: parseFloat(document.getElementById('xlim-min').value),
+                    xMax: parseFloat(document.getElementById('xlim-max').value),
+                    yMin: parseFloat(document.getElementById('ylim-min').value),
+                    yMax: parseFloat(document.getElementById('ylim-max').value)
+                });
+            }, { passive: false });
             canvas.addEventListener('mouseleave', () => { document.getElementById('coordsOverlay').style.display = 'none'; isDragging = false; plot(); });
+
+            // --- Touch (móvil): un dedo = pan / tap para ver el valor, dos dedos = pinch-zoom ---
+            canvas.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                if (e.touches.length === 1) {
+                    const t = e.touches[0];
+                    startPan(t.clientX, t.clientY);
+                    tapStartPos = { x: t.clientX, y: t.clientY };
+                    tapMoved = false;
+                    pinchInitialBounds = null;
+                } else if (e.touches.length === 2) {
+                    isDragging = false;
+                    touchStartDist = getTouchDistance(e.touches[0], e.touches[1]);
+                    pinchInitialBounds = {
+                        xMin: parseFloat(document.getElementById('xlim-min').value),
+                        xMax: parseFloat(document.getElementById('xlim-max').value),
+                        yMin: parseFloat(document.getElementById('ylim-min').value),
+                        yMax: parseFloat(document.getElementById('ylim-max').value)
+                    };
+                    const rect = canvas.getBoundingClientRect();
+                    touchMidPoint = {
+                        x: (e.touches[0].clientX + e.touches[1].clientX) / 2 - rect.left,
+                        y: (e.touches[0].clientY + e.touches[1].clientY) / 2 - rect.top
+                    };
+                    document.getElementById('coordsOverlay').style.display = 'none';
+                }
+            }, { passive: false });
+
+            canvas.addEventListener('touchmove', (e) => {
+                e.preventDefault();
+                if (e.touches.length === 1 && isDragging) {
+                    const t = e.touches[0];
+                    if (Math.hypot(t.clientX - tapStartPos.x, t.clientY - tapStartPos.y) > 6) tapMoved = true;
+                    applyPan(t.clientX, t.clientY);
+                } else if (e.touches.length === 2 && pinchInitialBounds && touchStartDist > 0) {
+                    const newDist = getTouchDistance(e.touches[0], e.touches[1]);
+                    const zoomFactor = touchStartDist / newDist;
+                    applyZoomAtPoint(touchMidPoint.x, touchMidPoint.y, zoomFactor, pinchInitialBounds);
+                }
+            }, { passive: false });
+
+            canvas.addEventListener('touchend', (e) => {
+                if (e.touches.length === 0) {
+                    if (isDragging && !tapMoved && tapStartPos) {
+                        processGraphHover(tapStartPos.x, tapStartPos.y, true);
+                    }
+                    isDragging = false;
+                    pinchInitialBounds = null;
+                    touchStartDist = 0;
+                } else if (e.touches.length === 1) {
+                    pinchInitialBounds = null;
+                    const t = e.touches[0];
+                    startPan(t.clientX, t.clientY);
+                }
+            }, { passive: false });
+
             plot();
         }
 
@@ -1481,43 +2040,45 @@
 
         function plot() {
             if(!canvas) return;
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.clearRect(0, 0, logicalWidth, logicalHeight);
             const xMin = parseFloat(document.getElementById('xlim-min').value), xMax = parseFloat(document.getElementById('xlim-max').value);
             const yMin = parseFloat(document.getElementById('ylim-min').value), yMax = parseFloat(document.getElementById('ylim-max').value);
             if(isNaN(xMin) || isNaN(xMax) || isNaN(yMin) || isNaN(yMax) || xMin >= xMax || yMin >= yMax) return;
 
-            const mapX = (xm) => ((xm - xMin) / (xMax - xMin)) * canvas.width;
-            const mapY = (ym) => canvas.height - (((ym - yMin) / (yMax - yMin)) * canvas.height);
+            const mapX = (xm) => ((xm - xMin) / (xMax - xMin)) * logicalWidth;
+            const mapY = (ym) => logicalHeight - (((ym - yMin) / (yMax - yMin)) * logicalHeight);
 
             ctx.strokeStyle = 'rgba(255,255,255,0.05)'; ctx.lineWidth = 1; ctx.font = '10px Courier New'; ctx.fillStyle = '#64748b';
             for(let i = 0; i <= 10; i++) {
                 let xm = xMin + i * (xMax - xMin) / 10, xs = mapX(xm);
-                ctx.beginPath(); ctx.moveTo(xs, 0); ctx.lineTo(xs, canvas.height); ctx.stroke();
-                ctx.fillText(xm.toFixed(2), xs + 4, canvas.height - 6);
+                ctx.beginPath(); ctx.moveTo(xs, 0); ctx.lineTo(xs, logicalHeight); ctx.stroke();
+                ctx.fillText(xm.toFixed(2), xs + 4, logicalHeight - 6);
             }
             for(let i = 0; i <= 10; i++) {
                 let ym = yMin + i * (yMax - yMin) / 10, ys = mapY(ym);
-                ctx.beginPath(); ctx.moveTo(0, ys); ctx.lineTo(canvas.width, ys); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(0, ys); ctx.lineTo(logicalWidth, ys); ctx.stroke();
                 ctx.fillText(ym.toFixed(2), 6, ys - 4);
             }
 
             ctx.strokeStyle = '#334155'; ctx.lineWidth = 2;
             let xZero = mapX(0), yZero = mapY(0);
-            if(xZero >= 0 && xZero <= canvas.width) { ctx.beginPath(); ctx.moveTo(xZero, 0); ctx.lineTo(xZero, canvas.height); ctx.stroke(); }
-            if(yZero >= 0 && yZero <= canvas.height) { ctx.beginPath(); ctx.moveTo(0, yZero); ctx.lineTo(canvas.width, yZero); ctx.stroke(); }
+            if(xZero >= 0 && xZero <= logicalWidth) { ctx.beginPath(); ctx.moveTo(xZero, 0); ctx.lineTo(xZero, logicalHeight); ctx.stroke(); }
+            if(yZero >= 0 && yZero <= logicalHeight) { ctx.beginPath(); ctx.moveTo(0, yZero); ctx.lineTo(logicalWidth, yZero); ctx.stroke(); }
 
             const f1Expr = document.getElementById('graph-f1').value.trim();
             if(f1Expr) drawCurveSafely(f1Expr, mapX, mapY, xMin, xMax, '#06b6d4');
             const f2Expr = document.getElementById('graph-f2').value.trim();
             if(f2Expr) drawCurveSafely(f2Expr, mapX, mapY, xMin, xMax, '#f43f5e');
+
+            if (tapStartPos && !isDragging) drawPersistedTapMarkers();
         }
 
         function drawCurveSafely(expr, mapX, mapY, xMin, xMax, colorStr) {
             ctx.strokeStyle = colorStr; ctx.lineWidth = 3; ctx.beginPath();
             let isFirst = true, fn;
             try { fn = new Function('x', 'PI', 'pi', 'E', 'e', 'w', 'omega', 'Omega', `with(Math) { return ${expr}; }`); } catch(e) { return; }
-            for(let sx = 0; sx <= canvas.width; sx += 2) {
-                let xm = xMin + (sx / canvas.width) * (xMax - xMin);
+            for(let sx = 0; sx <= logicalWidth; sx += 2) {
+                let xm = xMin + (sx / logicalWidth) * (xMax - xMin);
                 try {
                     let ym = fn(xm, Math.PI, Math.PI, Math.E, Math.E, 1, 1, 1);
                     if(isNaN(ym) || !isFinite(ym)) { isFirst = true; continue; }
@@ -1528,32 +2089,51 @@
             ctx.stroke();
         }
 
-        function processGraphHover(e) {
+        // En touch no existe "hover": al tocar un punto, su valor queda fijo en pantalla
+        // (se vuelve a dibujar en cada plot()) hasta el próximo tap o arrastre.
+        function drawPersistedTapMarkers() {
             const rect = canvas.getBoundingClientRect();
-            const sx = ((e.clientX - rect.left) / rect.width) * canvas.width, sy = ((e.clientY - rect.top) / rect.height) * canvas.height;
+            const sx = tapStartPos.x - rect.left, sy = tapStartPos.y - rect.top;
             const xMin = parseFloat(document.getElementById('xlim-min').value), xMax = parseFloat(document.getElementById('xlim-max').value);
             const yMin = parseFloat(document.getElementById('ylim-min').value), yMax = parseFloat(document.getElementById('ylim-max').value);
-            let xm = xMin + (sx / canvas.width) * (xMax - xMin), ym = yMin + ((canvas.height - sy) / canvas.height) * (yMax - yMin);
+            const xm = xMin + (sx / logicalWidth) * (xMax - xMin);
+            drawValueMarkersAt(sx, xm, xMin, xMax, yMin, yMax);
+        }
 
-            const overlay = document.getElementById('coordsOverlay');
-            overlay.style.display = 'block'; overlay.innerHTML = `X: ${xm.toFixed(3)}, Y: ${ym.toFixed(3)}`;
-            plot();
-
+        function drawValueMarkersAt(sx, xm, xMin, xMax, yMin, yMax) {
             function drawCursorDot(expression, colorCode) {
                 try {
                     let fn = new Function('x', 'PI', 'pi', 'E', 'e', 'w', 'omega', 'Omega', `with(Math) { return ${expression}; }`);
                     let yValue = fn(xm, Math.PI, Math.PI, Math.E, Math.E, 1, 1, 1);
                     if(!isNaN(yValue) && isFinite(yValue)) {
-                        let screenY = canvas.height - (((yValue - yMin) / (yMax - yMin)) * canvas.height);
-                        if(screenY >= 0 && screenY <= canvas.height) {
+                        let screenY = logicalHeight - (((yValue - yMin) / (yMax - yMin)) * logicalHeight);
+                        if(screenY >= 0 && screenY <= logicalHeight) {
                             ctx.fillStyle = colorCode; ctx.beginPath(); ctx.arc(sx, screenY, 6, 0, 2 * Math.PI); ctx.fill();
-                            ctx.fillStyle = '#ffffff'; ctx.font = 'bold 11px sans-serif'; ctx.fillText(`y=${yValue.toFixed(4)}`, sx + 8, screenY - 4);
+                            ctx.fillStyle = '#ffffff'; ctx.font = 'bold 11px sans-serif';
+                            const label = `y=${yValue.toFixed(4)}`;
+                            const labelX = sx + logicalWidth - sx < 90 ? sx - ctx.measureText(label).width - 10 : sx + 8;
+                            ctx.fillText(label, labelX, screenY - 4);
                         }
                     }
                 } catch(ex){}
             }
             const f1 = document.getElementById('graph-f1').value.trim(); if(f1) drawCursorDot(f1, '#06b6d4');
             const f2 = document.getElementById('graph-f2').value.trim(); if(f2) drawCursorDot(f2, '#f43f5e');
+        }
+
+        function processGraphHover(clientX, clientY, isTap) {
+            const rect = canvas.getBoundingClientRect();
+            const sx = clientX - rect.left, sy = clientY - rect.top;
+            const xMin = parseFloat(document.getElementById('xlim-min').value), xMax = parseFloat(document.getElementById('xlim-max').value);
+            const yMin = parseFloat(document.getElementById('ylim-min').value), yMax = parseFloat(document.getElementById('ylim-max').value);
+            let xm = xMin + (sx / logicalWidth) * (xMax - xMin), ym = yMin + ((logicalHeight - sy) / logicalHeight) * (yMax - yMin);
+
+            const overlay = document.getElementById('coordsOverlay');
+            overlay.style.display = 'block'; overlay.innerHTML = `X: ${xm.toFixed(3)}, Y: ${ym.toFixed(3)}`;
+
+            if (isTap) { tapStartPos = { x: clientX, y: clientY }; }
+            plot();
+            drawValueMarkersAt(sx, xm, xMin, xMax, yMin, yMax);
         }
     </script>
 </body>
