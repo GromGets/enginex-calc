@@ -91,6 +91,13 @@
         .copyright-modal p.muted { color: var(--text-muted); font-size: 11px; }
         .copyright-modal strong { color: var(--emerald); }
         .copyright-modal .btn { margin-top: 10px; }
+        .tool-modal { max-width: 640px; }
+        .matrix-input-grid { display: grid; gap: 6px; margin-top: 8px; }
+        .matrix-cell { text-align: center; padding: 8px 4px !important; font-family: 'Courier New', monospace; }
+        .dim-select { width: auto !important; display: inline-block; padding: 6px 8px !important; }
+        .result-table { border-collapse: collapse; margin: 0 auto; }
+        .result-table td { padding: 8px 14px; border: 1px solid var(--border); font-family: 'Courier New', monospace; color: var(--emerald); text-align: center; }
+        .poly-root-row { display: flex; align-items: center; justify-content: space-between; background: rgba(0,0,0,0.2); padding: 10px 14px; border-radius: 6px; margin-bottom: 8px; }
 
         /* LaTeX Render Box */
         .latex-rendered { 
@@ -255,6 +262,64 @@
             </div>
 
             <button class="btn btn-outline" style="margin-top: 16px;" onclick="toggleCopyrightModal(false)">Cerrar</button>
+        </div>
+    </div>
+
+    <div class="copyright-modal-overlay" id="matrix-modal-overlay" onclick="if(event.target===this) toggleMatrixModal(false)">
+        <div class="copyright-modal tool-modal">
+            <h2>🔢 Calculadora de Matrices</h2>
+            <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+                <div style="flex: 1; min-width: 220px;">
+                    <div style="font-weight: 700; color: var(--cyan); margin-bottom: 8px;">Matriz A</div>
+                    <div>
+                        <select id="matrixA-rows" class="input-control dim-select" onchange="rebuildMatrixInputs('A')">
+                            <option value="1">1</option><option value="2" selected>2</option><option value="3">3</option><option value="4">4</option>
+                        </select>
+                        <span style="color: var(--text-muted);">×</span>
+                        <select id="matrixA-cols" class="input-control dim-select" onchange="rebuildMatrixInputs('A')">
+                            <option value="1">1</option><option value="2" selected>2</option><option value="3">3</option><option value="4">4</option>
+                        </select>
+                    </div>
+                    <div id="matrixA-grid" class="matrix-input-grid"></div>
+                </div>
+                <div style="flex: 1; min-width: 220px;">
+                    <div style="font-weight: 700; color: var(--rose); margin-bottom: 8px;">Matriz B</div>
+                    <div>
+                        <select id="matrixB-rows" class="input-control dim-select" onchange="rebuildMatrixInputs('B')">
+                            <option value="1">1</option><option value="2" selected>2</option><option value="3">3</option><option value="4">4</option>
+                        </select>
+                        <span style="color: var(--text-muted);">×</span>
+                        <select id="matrixB-cols" class="input-control dim-select" onchange="rebuildMatrixInputs('B')">
+                            <option value="1">1</option><option value="2" selected>2</option><option value="3">3</option><option value="4">4</option>
+                        </select>
+                    </div>
+                    <div id="matrixB-grid" class="matrix-input-grid"></div>
+                </div>
+            </div>
+            <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 18px;">
+                <button class="btn btn-cyan" style="flex: 1; min-width: 100px;" onclick="doMatrixMultiply()">A × B</button>
+                <button class="btn btn-outline" style="flex: 1; min-width: 100px;" onclick="doMatrixDeterminant('A')">det(A)</button>
+                <button class="btn btn-outline" style="flex: 1; min-width: 100px;" onclick="doMatrixDeterminant('B')">det(B)</button>
+            </div>
+            <div id="matrix-result-zone" style="display: none; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border); overflow-x: auto;">
+                <div id="matrix-result-display"></div>
+            </div>
+            <button class="btn btn-outline" style="margin-top: 16px;" onclick="toggleMatrixModal(false)">Cerrar</button>
+        </div>
+    </div>
+
+    <div class="copyright-modal-overlay" id="poly-modal-overlay" onclick="if(event.target===this) togglePolyModal(false)">
+        <div class="copyright-modal tool-modal">
+            <h2>📐 Polinomios (raíces completas)</h2>
+            <div style="display: flex; gap: 10px; margin-bottom: 16px;">
+                <button class="btn" id="poly-deg2-btn" style="flex: 1;" onclick="setPolyDegree(2)">Grado 2</button>
+                <button class="btn btn-outline" id="poly-deg3-btn" style="flex: 1;" onclick="setPolyDegree(3)">Grado 3</button>
+            </div>
+            <div class="latex-rendered" id="poly-formula-preview" style="min-height: 40px; font-size: 18px; margin-bottom: 14px;"></div>
+            <div id="poly-coef-inputs" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;"></div>
+            <button class="btn btn-cyan" style="margin-top: 16px;" onclick="doSolvePolynomial()">Calcular raíces</button>
+            <div id="poly-result-zone" style="display: none; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border);"></div>
+            <button class="btn btn-outline" style="margin-top: 16px;" onclick="togglePolyModal(false)">Cerrar</button>
         </div>
     </div>
 
@@ -494,99 +559,94 @@
         </div>
 
         <div id="tab-calculadora" class="tab-content">
-            <div class="layout-row">
-
-                <div class="layout-col-left">
-                    <div class="card">
-                        <div class="card-title">🖩 Calculadora Científica</div>
-                        <div class="calc-display-box">
-                            <div class="latex-rendered calc-expr-preview" id="calc-preview">0</div>
-                            <input type="text" id="calc-expression-input" class="input-control" style="margin-top: 10px; font-size: 16px;" placeholder="Escribí o usá el teclado..." oninput="handleCalcInputChange()" onkeydown="if(event.key==='Enter'){ event.preventDefault(); calcEvaluate(); }">
-                            <div id="calc-result-zone" style="display: none; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border);">
-                                <div class="calc-result-main" id="calc-result-main"></div>
-                                <div class="calc-result-sub" id="calc-result-sub"></div>
-                            </div>
-                        </div>
-                        <button class="btn btn-outline" style="margin-top: 12px;" onclick="saveCalcResultToMemory()" id="calc-save-btn" disabled>💾 Guardar en Memoria</button>
-                        <p style="font-size: 11px; color: var(--text-muted); margin-top: 10px; line-height:1.5;">
-                            Números complejos: usá <code>i</code> (ej: <code>3+4i</code>). Coordenadas: <code>Pol(x,y)</code> y <code>Rec(r,θ)</code>. <code>Ans</code> = último resultado.
-                        </p>
-                    </div>
-
-                    <div class="card" style="background-color: rgba(15, 23, 42, 0.6);">
-                        <div class="card-title" style="border-left-color: var(--emerald);">📦 Variables</div>
-                        <div class="memory-list-container">
-                            <p style="color: var(--text-muted); font-size: 13px; text-align: center; padding: 15px;">No hay variables guardadas.</p>
-                        </div>
+            <div class="card">
+                <div class="calc-display-box">
+                    <div class="latex-rendered calc-expr-preview" id="calc-preview">0</div>
+                    <input type="text" id="calc-expression-input" class="input-control" readonly inputmode="none" style="margin-top: 10px; font-size: 16px;" placeholder="Usá el teclado..." onkeydown="if(event.key==='Enter'){ event.preventDefault(); calcEvaluate(); }">
+                    <div id="calc-result-zone" style="display: none; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border);">
+                        <div class="calc-result-main" id="calc-result-main"></div>
+                        <div class="calc-result-sub" id="calc-result-sub"></div>
                     </div>
                 </div>
-
-                <div class="layout-col-right">
-                    <div class="card">
-                        <div class="scientific-keyboard" id="calc-keyboard">
-                            <div class="key-btn key-prefix" id="calc-btn-shift" onclick="toggleCalcShift()" title="Segunda función (inversas)">SHIFT</div>
-                            <div class="key-btn key-mode" id="calc-btn-mode" onclick="cycleCalcAngleMode()" title="Modo de ángulo">DEG</div>
-                            <div class="key-btn key-clear" onclick="calcClear()">AC</div>
-                            <div class="key-btn key-clear" onclick="calcBackspace()">⌫</div>
-                            <div class="key-btn key-op" onclick="calcInsert('(')">(</div>
-                            <div class="key-btn key-op" onclick="calcInsert(')')">)</div>
-
-                            <div class="key-btn key-fn" id="calc-btn-sin" onclick="calcTrigButtonPress('sin')">sin</div>
-                            <div class="key-btn key-fn" id="calc-btn-cos" onclick="calcTrigButtonPress('cos')">cos</div>
-                            <div class="key-btn key-fn" id="calc-btn-tan" onclick="calcTrigButtonPress('tan')">tan</div>
-                            <div class="key-btn key-fn" onclick="calcInsert('sinh(')">sinh</div>
-                            <div class="key-btn key-fn" onclick="calcInsert('cosh(')">cosh</div>
-                            <div class="key-btn key-fn" onclick="calcInsert('tanh(')">tanh</div>
-
-                            <div class="key-btn key-fn" onclick="calcInsert('log(')">log</div>
-                            <div class="key-btn key-fn" onclick="calcInsert('ln(')">ln</div>
-                            <div class="key-btn key-fn" onclick="calcInsert('sqrt(')">√</div>
-                            <div class="key-btn key-fn" onclick="calcInsert('cbrt(')">∛</div>
-                            <div class="key-btn key-op" onclick="calcInsert('^2')">x²</div>
-                            <div class="key-btn key-op" onclick="calcInsert('^')">xʸ</div>
-
-                            <div class="key-btn key-op" onclick="calcInsert('pi')">π</div>
-                            <div class="key-btn key-op" onclick="calcInsert('e')">e</div>
-                            <div class="key-btn key-op" style="color:#f43f5e;" onclick="calcInsert('i')">i</div>
-                            <div class="key-btn key-prefix-small" onclick="calcInsert('Pol(')">Pol(</div>
-                            <div class="key-btn key-prefix-small" onclick="calcInsert('Rec(')">Rec(</div>
-                            <div class="key-btn key-fn" onclick="calcInsert('nthroot(')">ⁿ√</div>
-
-                            <div class="key-btn" onclick="calcInsert('7')">7</div>
-                            <div class="key-btn" onclick="calcInsert('8')">8</div>
-                            <div class="key-btn" onclick="calcInsert('9')">9</div>
-                            <div class="key-btn key-op" onclick="calcInsert('/')">÷</div>
-                            <div class="key-btn key-prefix-small" onclick="calcInsert('Ans')">Ans</div>
-                            <div class="key-btn key-op" onclick="calcInsert(',')">,</div>
-
-                            <div class="key-btn" onclick="calcInsert('4')">4</div>
-                            <div class="key-btn" onclick="calcInsert('5')">5</div>
-                            <div class="key-btn" onclick="calcInsert('6')">6</div>
-                            <div class="key-btn key-op" onclick="calcInsert('*')">×</div>
-                            <div class="key-btn key-op" onclick="calcToggleSign()">+/-</div>
-                            <div class="key-btn key-op" onclick="calcInsert('/100')">%</div>
-
-                            <div class="key-btn" onclick="calcInsert('1')">1</div>
-                            <div class="key-btn" onclick="calcInsert('2')">2</div>
-                            <div class="key-btn" onclick="calcInsert('3')">3</div>
-                            <div class="key-btn key-op" onclick="calcInsert('-')">−</div>
-                            <div class="key-btn key-op" onclick="calcInsert('+')">+</div>
-                            <div class="key-btn key-action" onclick="saveCalcResultToMemory()" title="Guardar resultado en memoria">💾M</div>
-
-                            <div class="key-btn" style="grid-column: span 3;" onclick="calcInsert('0')">0</div>
-                            <div class="key-btn" onclick="calcInsert('.')">.</div>
-                            <div class="key-btn key-action" style="grid-column: span 2;" onclick="calcEvaluate()">=</div>
-                        </div>
-                    </div>
-
-                    <div class="card">
-                        <div class="card-title" style="border-left-color: var(--cyan);">🕐 Historial</div>
-                        <div class="eq-list" id="calc-history-list">
-                            <p style="color: var(--text-muted); font-size: 13px; text-align: center; padding: 15px;">Sin cálculos todavía.</p>
-                        </div>
-                    </div>
+                <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px;">
+                    <button class="btn btn-outline" style="flex: 1; min-width: 140px;" onclick="saveCalcResultToMemory()" id="calc-save-btn" disabled>💾 Guardar en Memoria</button>
+                    <button class="btn btn-outline" style="flex: 1; min-width: 120px;" onclick="toggleMatrixModal(true)">🔢 Matrices</button>
+                    <button class="btn btn-outline" style="flex: 1; min-width: 120px;" onclick="togglePolyModal(true)">📐 Polinomios</button>
                 </div>
+            </div>
 
+            <div class="card">
+                <div class="scientific-keyboard" id="calc-keyboard">
+                    <div class="key-btn key-prefix" id="calc-btn-shift" onclick="toggleCalcShift()" title="Segunda función (inversas)">SHIFT</div>
+                    <div class="key-btn key-mode" id="calc-btn-mode" onclick="cycleCalcAngleMode()" title="Modo de ángulo">DEG</div>
+                    <div class="key-btn key-clear" onclick="calcClear()">AC</div>
+                    <div class="key-btn key-clear" onclick="calcBackspace()">⌫</div>
+                    <div class="key-btn key-op" onclick="calcInsert('(')">(</div>
+                    <div class="key-btn key-op" onclick="calcInsert(')')">)</div>
+
+                    <div class="key-btn key-fn" id="calc-btn-sin" onclick="calcTrigButtonPress('sin')">sin</div>
+                    <div class="key-btn key-fn" id="calc-btn-cos" onclick="calcTrigButtonPress('cos')">cos</div>
+                    <div class="key-btn key-fn" id="calc-btn-tan" onclick="calcTrigButtonPress('tan')">tan</div>
+                    <div class="key-btn key-fn" onclick="calcInsert('sinh(')">sinh</div>
+                    <div class="key-btn key-fn" onclick="calcInsert('cosh(')">cosh</div>
+                    <div class="key-btn key-fn" onclick="calcInsert('tanh(')">tanh</div>
+
+                    <div class="key-btn key-fn" onclick="calcInsert('log(')">log</div>
+                    <div class="key-btn key-fn" onclick="calcInsert('ln(')">ln</div>
+                    <div class="key-btn key-fn" onclick="calcInsert('sqrt(')">√</div>
+                    <div class="key-btn key-fn" onclick="calcInsert('cbrt(')">∛</div>
+                    <div class="key-btn key-op" onclick="calcInsert('^2')">x²</div>
+                    <div class="key-btn key-op" onclick="calcInsert('^')">xʸ</div>
+
+                    <div class="key-btn key-op" onclick="calcInsert('pi')">π</div>
+                    <div class="key-btn key-op" onclick="calcInsert('e')">e</div>
+                    <div class="key-btn key-op" style="color:#f43f5e;" onclick="calcInsert('i')">i</div>
+                    <div class="key-btn key-prefix-small" onclick="calcInsert('Pol(')">Pol(</div>
+                    <div class="key-btn key-prefix-small" onclick="calcInsert('Rec(')">Rec(</div>
+                    <div class="key-btn key-fn" onclick="calcInsert('nthroot(')">ⁿ√</div>
+
+                    <div class="key-btn" onclick="calcInsert('7')">7</div>
+                    <div class="key-btn" onclick="calcInsert('8')">8</div>
+                    <div class="key-btn" onclick="calcInsert('9')">9</div>
+                    <div class="key-btn key-op" onclick="calcInsert('/')">÷</div>
+                    <div class="key-btn key-prefix-small" onclick="calcInsert('Ans')">Ans</div>
+                    <div class="key-btn key-op" onclick="calcInsert(',')">,</div>
+
+                    <div class="key-btn" onclick="calcInsert('4')">4</div>
+                    <div class="key-btn" onclick="calcInsert('5')">5</div>
+                    <div class="key-btn" onclick="calcInsert('6')">6</div>
+                    <div class="key-btn key-op" onclick="calcInsert('*')">×</div>
+                    <div class="key-btn key-op" onclick="calcToggleSign()">+/-</div>
+                    <div class="key-btn key-op" onclick="calcInsert('/100')">%</div>
+
+                    <div class="key-btn" onclick="calcInsert('1')">1</div>
+                    <div class="key-btn" onclick="calcInsert('2')">2</div>
+                    <div class="key-btn" onclick="calcInsert('3')">3</div>
+                    <div class="key-btn key-op" onclick="calcInsert('-')">−</div>
+                    <div class="key-btn key-op" onclick="calcInsert('+')">+</div>
+                    <div class="key-btn key-action" onclick="saveCalcResultToMemory()" title="Guardar resultado en memoria">💾M</div>
+
+                    <div class="key-btn" style="grid-column: span 3;" onclick="calcInsert('0')">0</div>
+                    <div class="key-btn" onclick="calcInsert('.')">.</div>
+                    <div class="key-btn key-action" style="grid-column: span 2;" onclick="calcEvaluate()">=</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div class="card-title" style="border-left-color: var(--cyan); margin-bottom: 0;">🕐 Historial</div>
+                    <button class="btn-action-small" onclick="clearCalcHistory()" title="Borrar todo el historial">🗑 Borrar todo</button>
+                </div>
+                <div class="eq-list" id="calc-history-list" style="margin-top: 12px;">
+                    <p style="color: var(--text-muted); font-size: 13px; text-align: center; padding: 15px;">Sin cálculos todavía.</p>
+                </div>
+            </div>
+
+            <div class="card" style="background-color: rgba(15, 23, 42, 0.6);">
+                <div class="card-title" style="border-left-color: var(--emerald);">📦 Variables</div>
+                <div class="memory-list-container">
+                    <p style="color: var(--text-muted); font-size: 13px; text-align: center; padding: 15px;">No hay variables guardadas.</p>
+                </div>
             </div>
         </div>
 
@@ -1537,7 +1597,9 @@
             input.value = input.value.substring(0, start) + text + input.value.substring(end);
             const insertedEnd = start + text.length;
             input.selectionStart = input.selectionEnd = cursorOffsetFromEnd ? (insertedEnd - cursorOffsetFromEnd) : insertedEnd;
-            input.focus();
+            // Sin input.focus(): el input es readonly y enfocarlo desde botones dispara el
+            // teclado nativo de Android igual (algunos WebView lo muestran con solo el focus
+            // programático). selectionStart/selectionEnd se conservan sin foco.
             handleCalcInputChange();
         }
 
@@ -1551,14 +1613,12 @@
                 input.value = input.value.substring(0, start) + input.value.substring(end);
                 input.selectionStart = input.selectionEnd = start;
             }
-            input.focus();
             handleCalcInputChange();
         }
 
         function calcClear() {
             const input = document.getElementById('calc-expression-input');
             input.value = '';
-            input.focus();
             handleCalcInputChange();
             document.getElementById('calc-result-zone').style.display = 'none';
             document.getElementById('calc-save-btn').disabled = true;
@@ -1576,7 +1636,6 @@
             } else {
                 input.value = val + '-';
             }
-            input.focus();
             handleCalcInputChange();
         }
 
@@ -1626,7 +1685,7 @@
                     : result;
                 calcLastResultFormatted = formatted;
 
-                calcHistory.unshift({ expr: raw, resultText: formatted.main });
+                calcHistory.unshift({ id: Date.now() + Math.random(), expr: raw, resultText: formatted.main });
                 if (calcHistory.length > 30) calcHistory.pop();
                 renderCalcHistory();
             } catch (e) {
@@ -1660,13 +1719,254 @@
             calcHistory.forEach((h) => {
                 const div = document.createElement('div');
                 div.className = 'calc-history-item';
+                div.style.position = 'relative';
+                div.style.paddingRight = '36px';
                 div.onclick = () => {
                     document.getElementById('calc-expression-input').value = h.expr;
                     handleCalcInputChange();
                 };
-                div.innerHTML = `<div class="calc-history-expr">${h.expr}</div><div class="calc-history-result">= ${h.resultText}</div>`;
+                div.innerHTML = `
+                    <div class="calc-history-expr">${h.expr}</div>
+                    <div class="calc-history-result">= ${h.resultText}</div>
+                    <button class="delete-eq-btn" style="top: 8px;" onclick="event.stopPropagation(); deleteCalcHistoryItem(${h.id})" title="Borrar esta cuenta">❌</button>
+                `;
                 container.appendChild(div);
             });
+        }
+
+        function deleteCalcHistoryItem(id) {
+            calcHistory = calcHistory.filter(h => h.id !== id);
+            renderCalcHistory();
+        }
+
+        function clearCalcHistory() {
+            if (calcHistory.length === 0) return;
+            if (!confirm('¿Borrar todo el historial de cálculos? Esta acción no se puede deshacer.')) return;
+            calcHistory = [];
+            renderCalcHistory();
+        }
+
+        // --- CALCULADORA DE MATRICES (hasta 4x4) ---
+        function toggleMatrixModal(show) {
+            document.getElementById('matrix-modal-overlay').style.display = show ? 'flex' : 'none';
+            if (show) {
+                rebuildMatrixInputs('A');
+                rebuildMatrixInputs('B');
+                document.getElementById('matrix-result-zone').style.display = 'none';
+            }
+        }
+
+        function rebuildMatrixInputs(which) {
+            const rows = parseInt(document.getElementById(`matrix${which}-rows`).value, 10);
+            const cols = parseInt(document.getElementById(`matrix${which}-cols`).value, 10);
+            const grid = document.getElementById(`matrix${which}-grid`);
+            grid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+            grid.innerHTML = '';
+            for (let r = 0; r < rows; r++) {
+                for (let c = 0; c < cols; c++) {
+                    const input = document.createElement('input');
+                    input.type = 'text';
+                    input.inputMode = 'decimal';
+                    input.className = 'input-control matrix-cell';
+                    input.placeholder = '0';
+                    input.id = `matrix${which}-cell-${r}-${c}`;
+                    grid.appendChild(input);
+                }
+            }
+        }
+
+        function readMatrix(which) {
+            const rows = parseInt(document.getElementById(`matrix${which}-rows`).value, 10);
+            const cols = parseInt(document.getElementById(`matrix${which}-cols`).value, 10);
+            const m = [];
+            for (let r = 0; r < rows; r++) {
+                const row = [];
+                for (let c = 0; c < cols; c++) {
+                    const raw = document.getElementById(`matrix${which}-cell-${r}-${c}`).value.trim();
+                    const val = raw === '' ? 0 : parseFloat(raw);
+                    if (isNaN(val)) throw new Error(`Valor inválido en fila ${r + 1}, columna ${c + 1} de la matriz ${which}`);
+                    row.push(val);
+                }
+                m.push(row);
+            }
+            return m;
+        }
+
+        // Expansión de Laplace por la primera fila; sirve para cualquier tamaño cuadrado (1-4 acá).
+        function matrixDeterminant(m) {
+            const n = m.length;
+            if (n !== m[0].length) throw new Error('El determinante solo existe para matrices cuadradas');
+            if (n === 1) return m[0][0];
+            if (n === 2) return m[0][0] * m[1][1] - m[0][1] * m[1][0];
+            let det = 0;
+            for (let col = 0; col < n; col++) {
+                const minor = m.slice(1).map(row => row.filter((_, c) => c !== col));
+                const sign = (col % 2 === 0) ? 1 : -1;
+                det += sign * m[0][col] * matrixDeterminant(minor);
+            }
+            return det;
+        }
+
+        function multiplyMatrices(A, B) {
+            const rowsA = A.length, colsA = A[0].length, rowsB = B.length, colsB = B[0].length;
+            if (colsA !== rowsB) throw new Error(`No se puede multiplicar: A es ${rowsA}×${colsA} y B es ${rowsB}×${colsB} (las columnas de A deben ser iguales a las filas de B)`);
+            const result = [];
+            for (let i = 0; i < rowsA; i++) {
+                const row = [];
+                for (let j = 0; j < colsB; j++) {
+                    let sum = 0;
+                    for (let k = 0; k < colsA; k++) sum += A[i][k] * B[k][j];
+                    row.push(sum);
+                }
+                result.push(row);
+            }
+            return result;
+        }
+
+        function renderMatrixTable(m) {
+            let html = '<table class="result-table">';
+            m.forEach(row => {
+                html += '<tr>' + row.map(val => `<td>${formatCalcNumber(val)}</td>`).join('') + '</tr>';
+            });
+            return html + '</table>';
+        }
+
+        function doMatrixMultiply() {
+            const zone = document.getElementById('matrix-result-zone');
+            const display = document.getElementById('matrix-result-display');
+            zone.style.display = 'block';
+            try {
+                const result = multiplyMatrices(readMatrix('A'), readMatrix('B'));
+                display.innerHTML = `<div style="font-size: 12px; color: var(--text-muted); margin-bottom: 8px;">A × B =</div>` + renderMatrixTable(result);
+            } catch (e) {
+                display.innerHTML = `<div style="color: var(--rose);">⚠ ${e.message}</div>`;
+            }
+        }
+
+        function doMatrixDeterminant(which) {
+            const zone = document.getElementById('matrix-result-zone');
+            const display = document.getElementById('matrix-result-display');
+            zone.style.display = 'block';
+            try {
+                const det = matrixDeterminant(readMatrix(which));
+                display.innerHTML = `<div style="font-size: 20px; font-weight: 700; color: var(--emerald); text-align: center;">det(${which}) = ${formatCalcNumber(det)}</div>`;
+            } catch (e) {
+                display.innerHTML = `<div style="color: var(--rose);">⚠ ${e.message}</div>`;
+            }
+        }
+
+        // --- SOLVER DE POLINOMIOS (grado 2 y 3, raíces reales y complejas) ---
+        let polyDegree = 2;
+
+        function setPolyDegree(deg) {
+            polyDegree = deg;
+            document.getElementById('poly-deg2-btn').className = deg === 2 ? 'btn' : 'btn btn-outline';
+            document.getElementById('poly-deg3-btn').className = deg === 3 ? 'btn' : 'btn btn-outline';
+            const container = document.getElementById('poly-coef-inputs');
+            container.innerHTML = '';
+            const labels = deg === 2 ? ['a', 'b', 'c'] : ['a', 'b', 'c', 'd'];
+            labels.forEach(label => {
+                const wrap = document.createElement('div');
+                wrap.innerHTML = `
+                    <label style="font-size: 11px; color: var(--text-muted); display:block; margin-bottom: 4px;">${label}</label>
+                    <input type="text" inputmode="decimal" class="input-control" id="poly-coef-${label}" placeholder="0">
+                `;
+                container.appendChild(wrap);
+            });
+            const latex = deg === 2 ? '$$ax^2 + bx + c = 0$$' : '$$ax^3 + bx^2 + cx + d = 0$$';
+            renderLatexPreview(latex, 'poly-formula-preview', { emptyMessage: '' });
+            document.getElementById('poly-result-zone').style.display = 'none';
+        }
+
+        function togglePolyModal(show) {
+            document.getElementById('poly-modal-overlay').style.display = show ? 'flex' : 'none';
+            if (show) setPolyDegree(polyDegree);
+        }
+
+        // x = (-b ± sqrt(b²-4ac)) / 2a, con sqrt complejo: siempre da las 2 raíces, reales o complejas.
+        function solveQuadratic(a, b, c) {
+            if (Math.abs(a) < 1e-14) {
+                if (Math.abs(b) < 1e-14) throw new Error('a y b no pueden ser ambos 0');
+                return [new Complex(-c / b, 0)];
+            }
+            const B = new Complex(b, 0), disc = new Complex(b * b - 4 * a * c, 0);
+            const sqrtDisc = complexSqrt(disc);
+            const twoA = new Complex(2 * a, 0);
+            return [B.neg().add(sqrtDisc).div(twoA), B.neg().sub(sqrtDisc).div(twoA)];
+        }
+
+        // Cardano en aritmética compleja: evita el "casus irreducibilis" de las fórmulas reales
+        // (cuando hay 3 raíces reales, la fórmula real clásica necesita pasar por números
+        // complejos intermedios igual; acá ya estamos en Complex así que no hace falta un caso
+        // especial para eso).
+        function solveCubic(a, b, c, d) {
+            if (Math.abs(a) < 1e-14) return solveQuadratic(b, c, d);
+            const p = (3 * a * c - b * b) / (3 * a * a);
+            const q = (2 * b * b * b - 9 * a * b * c + 27 * a * a * d) / (27 * a * a * a);
+            const shift = b / (3 * a);
+
+            const P = new Complex(p, 0), Q = new Complex(q, 0);
+            const delta = Q.mul(Q).div(new Complex(4, 0)).add(P.mul(P).mul(P).div(new Complex(27, 0)));
+            const sqrtDelta = complexSqrt(delta);
+            const negQHalf = Q.div(new Complex(-2, 0));
+            const cand1 = negQHalf.add(sqrtDelta), cand2 = negQHalf.sub(sqrtDelta);
+            // Se elige la rama de mayor módulo para evitar cancelación numérica (y de paso
+            // resuelve el caso degenerado p≠0,q=0 donde una rama da exactamente 0).
+            const uCubed = (cand1.abs() >= cand2.abs()) ? cand1 : cand2;
+
+            const u = (uCubed.abs() < 1e-12) ? new Complex(0, 0) : complexPow(uCubed, new Complex(1 / 3, 0));
+            const omega = new Complex(-0.5, Math.sqrt(3) / 2), omega2 = new Complex(-0.5, -Math.sqrt(3) / 2);
+            const us = [u, u.mul(omega), u.mul(omega2)];
+
+            return us.map(uu => {
+                const vv = (uu.abs() < 1e-12) ? new Complex(0, 0) : P.neg().div(new Complex(3, 0).mul(uu));
+                return uu.add(vv).sub(new Complex(shift, 0));
+            });
+        }
+
+        function doSolvePolynomial() {
+            const zone = document.getElementById('poly-result-zone');
+            zone.style.display = 'block';
+            try {
+                const labels = polyDegree === 2 ? ['a', 'b', 'c'] : ['a', 'b', 'c', 'd'];
+                const coefs = labels.map(label => {
+                    const raw = document.getElementById(`poly-coef-${label}`).value.trim();
+                    const val = raw === '' ? 0 : parseFloat(raw);
+                    if (isNaN(val)) throw new Error(`Coeficiente "${label}" inválido`);
+                    return val;
+                });
+                const roots = polyDegree === 2 ? solveQuadratic(...coefs) : solveCubic(...coefs);
+
+                let html = '';
+                roots.forEach((root, idx) => {
+                    const formatted = formatComplexResult(root, 'RAD');
+                    html += `
+                        <div class="poly-root-row">
+                            <span style="font-family:'Courier New',monospace; font-size:16px; color: var(--emerald); font-weight:700;">x<sub>${idx + 1}</sub> = ${formatted.main}</span>
+                            <button class="btn-action-small" onclick="savePolyRootToMemory(${idx})" title="Guardar en memoria">💾</button>
+                        </div>
+                    `;
+                });
+                zone.innerHTML = html;
+                window.lastPolyRoots = roots;
+                window.lastPolyRootsFormatted = roots.map(r => formatComplexResult(r, 'RAD'));
+            } catch (e) {
+                zone.innerHTML = `<div style="color: var(--rose);">⚠ ${e.message}</div>`;
+            }
+        }
+
+        function savePolyRootToMemory(idx) {
+            if (!window.lastPolyRootsFormatted || !window.lastPolyRootsFormatted[idx]) return;
+            const formatted = window.lastPolyRootsFormatted[idx];
+            calcResultCounter++;
+            savedVariables.push({
+                id: Date.now(),
+                name: 'Raiz_' + calcResultCounter,
+                val: window.lastPolyRoots[idx].re,
+                display: formatted.main,
+                insertText: formatted.insertText
+            });
+            renderMemoryList();
         }
 
         // --- COMPUTATIONAL ROOT SOLVER ---
