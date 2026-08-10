@@ -134,6 +134,8 @@
 
         /* Scientific Calculator */
         .calc-display-box { background-color: rgba(11, 19, 34, 0.7); border: 1px solid rgba(6, 182, 212, 0.2); border-radius: 6px; padding: 15px; margin-top: 5px; }
+        #calc-expression-input { white-space: pre-wrap; word-break: break-word; user-select: none; -webkit-user-select: none; }
+        #calc-expression-input.calc-input-placeholder { color: var(--text-muted); }
         .calc-expr-preview { min-height: 36px; font-size: 18px; color: #e2e8f0; overflow-x: auto; justify-content: flex-start !important; text-align: left; }
         .calc-result-main { font-size: 26px; font-weight: 700; color: var(--emerald); font-family: 'Courier New', monospace; word-break: break-word; }
         .calc-result-sub { font-size: 13px; color: var(--text-muted); font-family: 'Courier New', monospace; margin-top: 4px; }
@@ -562,7 +564,7 @@
             <div class="card">
                 <div class="calc-display-box">
                     <div class="latex-rendered calc-expr-preview" id="calc-preview">0</div>
-                    <input type="text" id="calc-expression-input" class="input-control" readonly inputmode="none" style="margin-top: 10px; font-size: 16px;" placeholder="Usá el teclado..." onkeydown="if(event.key==='Enter'){ event.preventDefault(); calcEvaluate(); }">
+                    <div id="calc-expression-input" class="input-control calc-input-placeholder" style="margin-top: 10px; font-size: 16px; min-height: 20px;">Usá el teclado...</div>
                     <div id="calc-result-zone" style="display: none; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border);">
                         <div class="calc-result-main" id="calc-result-main"></div>
                         <div class="calc-result-sub" id="calc-result-sub"></div>
@@ -725,7 +727,7 @@
         // abre el navegador del sistema para descargar el APK del release. Instalarlo sigue
         // requiriendo el toque manual de "instalar" (Android lo exige por seguridad), pero evita
         // tener que pedirme el archivo cada vez.
-        const APP_VERSION = '1.2.0';
+        const APP_VERSION = '1.2.1';
         const UPDATE_REPO = 'GromGets/enginex-calc';
 
         function compareVersions(a, b) {
@@ -1590,58 +1592,54 @@
         }
 
         // --- SCIENTIFIC CALCULATOR UI GLUE ---
-        function calcInsert(text, cursorOffsetFromEnd) {
-            const input = document.getElementById('calc-expression-input');
-            const start = input.selectionStart !== null ? input.selectionStart : input.value.length;
-            const end = input.selectionEnd !== null ? input.selectionEnd : input.value.length;
-            input.value = input.value.substring(0, start) + text + input.value.substring(end);
-            const insertedEnd = start + text.length;
-            input.selectionStart = input.selectionEnd = cursorOffsetFromEnd ? (insertedEnd - cursorOffsetFromEnd) : insertedEnd;
-            // Sin input.focus(): el input es readonly y enfocarlo desde botones dispara el
-            // teclado nativo de Android igual (algunos WebView lo muestran con solo el focus
-            // programático). selectionStart/selectionEnd se conservan sin foco.
+        // El display de la cuenta NO es un <input> real: es un <div> que solo muestra el
+        // string calcExprText. Con un <input> (aunque sea readonly), tocar selectionStart/
+        // selectionEnd desde JS hacía que el navegador "scrollee para mostrar la selección",
+        // lo que se sentía como que la pantalla saltaba sola al escribir/borrar. Sin ningún
+        // elemento de formulario real de por medio, no hay foco, selección ni autoscroll
+        // posibles — el usuario controla el scroll de la página, nada más.
+        let calcExprText = '';
+
+        function calcInsert(text) {
+            calcExprText += text;
             handleCalcInputChange();
         }
 
         function calcBackspace() {
-            const input = document.getElementById('calc-expression-input');
-            const start = input.selectionStart || 0, end = input.selectionEnd || 0;
-            if (start === end && start > 0) {
-                input.value = input.value.substring(0, start - 1) + input.value.substring(end);
-                input.selectionStart = input.selectionEnd = start - 1;
-            } else if (start !== end) {
-                input.value = input.value.substring(0, start) + input.value.substring(end);
-                input.selectionStart = input.selectionEnd = start;
-            }
+            calcExprText = calcExprText.slice(0, -1);
             handleCalcInputChange();
         }
 
         function calcClear() {
-            const input = document.getElementById('calc-expression-input');
-            input.value = '';
+            calcExprText = '';
             handleCalcInputChange();
             document.getElementById('calc-result-zone').style.display = 'none';
             document.getElementById('calc-save-btn').disabled = true;
         }
 
         function calcToggleSign() {
-            const input = document.getElementById('calc-expression-input');
-            const val = input.value;
-            const match = val.match(/(-?\d*\.?\d+)$/);
+            const match = calcExprText.match(/(-?\d*\.?\d+)$/);
             if (match) {
                 const numStr = match[1];
-                const start = val.length - numStr.length;
+                const start = calcExprText.length - numStr.length;
                 const newNum = numStr.startsWith('-') ? numStr.slice(1) : '-' + numStr;
-                input.value = val.slice(0, start) + newNum;
+                calcExprText = calcExprText.slice(0, start) + newNum;
             } else {
-                input.value = val + '-';
+                calcExprText += '-';
             }
             handleCalcInputChange();
         }
 
         function handleCalcInputChange() {
-            const input = document.getElementById('calc-expression-input');
-            renderLatexPreview(input.value, 'calc-preview', { computational: true, latexPrefix: '', emptyMessage: '0' });
+            const display = document.getElementById('calc-expression-input');
+            if (calcExprText) {
+                display.textContent = calcExprText;
+                display.classList.remove('calc-input-placeholder');
+            } else {
+                display.textContent = 'Usá el teclado...';
+                display.classList.add('calc-input-placeholder');
+            }
+            renderLatexPreview(calcExprText, 'calc-preview', { computational: true, latexPrefix: '', emptyMessage: '0' });
         }
 
         function toggleCalcShift() {
@@ -1664,8 +1662,7 @@
         }
 
         function calcEvaluate() {
-            const input = document.getElementById('calc-expression-input');
-            const raw = input.value.trim();
+            const raw = calcExprText.trim();
             if (!raw) return;
             const mainEl = document.getElementById('calc-result-main');
             const subEl = document.getElementById('calc-result-sub');
@@ -1722,7 +1719,7 @@
                 div.style.position = 'relative';
                 div.style.paddingRight = '36px';
                 div.onclick = () => {
-                    document.getElementById('calc-expression-input').value = h.expr;
+                    calcExprText = h.expr;
                     handleCalcInputChange();
                 };
                 div.innerHTML = `
@@ -2240,7 +2237,10 @@
             const v = savedVariables.find(x => x.id === id);
             if (!v) return;
             const text = v.insertText !== undefined ? v.insertText : String(v.val);
-            if (lastFocusedInput && lastFocusedInput.id && lastFocusedInput.id.startsWith('calc-')) {
+            // La calculadora ya no usa un <input> real (para evitar el autoscroll del navegador),
+            // así que no hay foco que detectar: se decide según qué pestaña está activa.
+            const calcTabActive = document.getElementById('tab-calculadora').classList.contains('active');
+            if (calcTabActive) {
                 calcInsert(text);
             } else {
                 insertLatex(text);
