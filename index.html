@@ -991,7 +991,7 @@
         // abre el navegador del sistema para descargar el APK del release. Instalarlo sigue
         // requiriendo el toque manual de "instalar" (Android lo exige por seguridad), pero evita
         // tener que pedirme el archivo cada vez.
-        const APP_VERSION = '1.3.1';
+        const APP_VERSION = '1.3.2';
         const UPDATE_REPO = 'GromGets/enginex-calc';
 
         function compareVersions(a, b) {
@@ -1219,7 +1219,7 @@
             const evaluateFormula = (expr) => {
                 if(!expr) return "--";
                 try {
-                    let fn = new Function('x', 'PI', 'pi', 'E', 'e', 'w', 'omega', 'Omega', `with(Math) { return ${expr}; }`);
+                    let fn = new Function('x', 'PI', 'pi', 'E', 'e', 'w', 'omega', 'Omega', `with(Math) { return ${insertImplicitMultiplication(expr, false)}; }`);
                     let res = fn(xVal, Math.PI, Math.PI, Math.E, Math.E, 1, 1, 1);
                     if(isNaN(res) || !isFinite(res)) return "Indefinido";
                     // Formateo elegante: exponencial si es muy grande/pequeño, de lo contrario max 6 decimales.
@@ -1434,6 +1434,7 @@
         // no es álgebra de un solo paso y se devuelve null; el solver numérico existente
         // sigue resolviendo esos casos, solo que sin mostrar la fórmula reordenada.
         function tokenizeExpr(str) {
+            str = insertImplicitMultiplication(str, true);
             const tokens = [];
             let i = 0;
             while (i < str.length) {
@@ -2044,7 +2045,7 @@
             for (let r = 0; r < rows; r++) {
                 const row = [];
                 for (let c = 0; c < cols; c++) {
-                    const raw = document.getElementById(`matrix${which}-cell-${r}-${c}`).value.trim();
+                    const raw = document.getElementById(`matrix${which}-cell-${r}-${c}`).value.trim().replace(',', '.');
                     const val = raw === '' ? 0 : parseFloat(raw);
                     if (isNaN(val)) throw new Error(`Valor inválido en fila ${r + 1}, columna ${c + 1} de la matriz ${which}`);
                     row.push(val);
@@ -2192,7 +2193,7 @@
             try {
                 const labels = polyDegree === 2 ? ['a', 'b', 'c'] : ['a', 'b', 'c', 'd'];
                 const coefs = labels.map(label => {
-                    const raw = document.getElementById(`poly-coef-${label}`).value.trim();
+                    const raw = document.getElementById(`poly-coef-${label}`).value.trim().replace(',', '.');
                     const val = raw === '' ? 0 : parseFloat(raw);
                     if (isNaN(val)) throw new Error(`Coeficiente "${label}" inválido`);
                     return val;
@@ -2292,8 +2293,38 @@
             updateSolvedFormulaDisplay();
         }
 
+        // Inserta "*" donde el usuario escribió multiplicación implícita, como en matemática
+        // normal ("3b" en vez de "3*b", "3(" en vez de "3*(", ")x" en vez de ")*x"). JS no
+        // soporta esto — "3b" es directamente un SyntaxError, y como evalMathCode atrapa esa
+        // excepción y devuelve NaN, el solver numérico terminaba sin encontrar NINGUNA raíz
+        // para NINGÚN valor, pareciendo "roto" para cualquier ecuación que use esta notación
+        // (que es la forma más natural de escribir una fórmula). No toca "1e-3"/"2.5e10"
+        // (notación científica) ni fórmulas que ya usan "*" explícito.
+        // preserveImaginarySuffix=true evita romper el sufijo imaginario de la calculadora
+        // ("4i" se deja intacto para que tokenizeExpr lo reconozca como literal imaginario,
+        // en vez de convertirlo en "4*i" — el resultado matemático es el mismo, pero así se
+        // conserva el símbolo pegado "4i" en la vista previa en vez de "4 · i").
+        function insertImplicitMultiplication(expr, preserveImaginarySuffix) {
+            // Ojo: usar un lookahead zero-width después de un grupo opcional (el exponente
+            // "e-3") es tramposo — si el lookahead falla, el motor de regex hace backtrack y
+            // deja de matchear el exponente con tal de que el resto matchee, corrompiendo
+            // silenciosamente "1e-3" en "1" + "e-3" suelto ("1*e-3"). Por eso el próximo char
+            // se captura DENTRO del match (grupo opcional, no lookahead): así siempre hay un
+            // match válido con o sin el exponente, y el motor no tiene motivo para backtrackear.
+            let result = expr.replace(/(\d+\.?\d*(?:[eE][-+]?\d+)?)([a-zA-Z(]?)/g, (match, num, nextChar, offset, full) => {
+                if (!nextChar) return match;
+                if (preserveImaginarySuffix && (nextChar === 'i' || nextChar === 'j')) {
+                    const afterNext = full[offset + match.length];
+                    if (!afterNext || !/[a-zA-Z0-9_]/.test(afterNext)) return match; // sufijo imaginario ("4i"): no tocar
+                }
+                return num + '*' + nextChar;
+            });
+            result = result.replace(/\)(?=[a-zA-Z0-9(])/g, ')*');
+            return result;
+        }
+
         function evalMathCode(formulaStr, targetVar, targetValue, variablesMap) {
-            let safeFormula = formulaStr.replace(/\^/g, '**');
+            let safeFormula = insertImplicitMultiplication(formulaStr.replace(/\^/g, '**'), false);
             let segments = safeFormula.split('=');
             let leftSide = segments[0].trim(), rightSide = segments[1] ? segments[1].trim() : "0";
 
@@ -2318,6 +2349,13 @@
                 if (v !== targetVar) {
                     let textVal = document.getElementById(`param_val_${v}`).value.trim();
                     if(!textVal) { alert(`Falta rellenar el valor del parámetro: ${v}`); err = true; return; }
+                    // Normaliza coma decimal a punto: el teclado numérico de Android en
+                    // español/Argentina usa "," como separador decimal (ej. "3,5"), y en JS
+                    // una coma dentro de una expresión NO da error — es el operador coma, que
+                    // silenciosamente evalúa "(3,5)" como 5, no como 3.5. Sin este fix, cualquier
+                    // parámetro con decimales tipeado con el teclado del teléfono quedaba mal
+                    // interpretado y arruinaba el cálculo sin avisar.
+                    textVal = textVal.replace(/,/g, '.');
                     try {
                         let parsed = new Function(`return (${textVal});`)();
                         if(isNaN(parsed) || parsed === null) throw "NaN";
@@ -2702,7 +2740,7 @@
         function drawCurveSafely(expr, mapX, mapY, xMin, xMax, colorStr) {
             ctx.strokeStyle = colorStr; ctx.lineWidth = 3; ctx.beginPath();
             let isFirst = true, fn;
-            try { fn = new Function('x', 'PI', 'pi', 'E', 'e', 'w', 'omega', 'Omega', `with(Math) { return ${expr}; }`); } catch(e) { return; }
+            try { fn = new Function('x', 'PI', 'pi', 'E', 'e', 'w', 'omega', 'Omega', `with(Math) { return ${insertImplicitMultiplication(expr, false)}; }`); } catch(e) { return; }
             for(let sx = 0; sx <= logicalWidth; sx += 2) {
                 let xm = xMin + (sx / logicalWidth) * (xMax - xMin);
                 try {
@@ -2729,7 +2767,7 @@
         function drawValueMarkersAt(sx, xm, xMin, xMax, yMin, yMax) {
             function drawCursorDot(expression, colorCode) {
                 try {
-                    let fn = new Function('x', 'PI', 'pi', 'E', 'e', 'w', 'omega', 'Omega', `with(Math) { return ${expression}; }`);
+                    let fn = new Function('x', 'PI', 'pi', 'E', 'e', 'w', 'omega', 'Omega', `with(Math) { return ${insertImplicitMultiplication(expression, false)}; }`);
                     let yValue = fn(xm, Math.PI, Math.PI, Math.E, Math.E, 1, 1, 1);
                     if(!isNaN(yValue) && isFinite(yValue)) {
                         let screenY = logicalHeight - (((yValue - yMin) / (yMax - yMin)) * logicalHeight);
@@ -3071,7 +3109,13 @@
                 // la descarga estándar.
                 if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) {
                     const base64Data = pdf.output('datauristring').split('base64,')[1];
-                    const PdfExport = window.Capacitor.registerPlugin('PdfExport');
+                    // El plugin ya está registrado del lado nativo (Java), así que el puente ya
+                    // debería exponerlo directo en Capacitor.Plugins.PdfExport. registerPlugin()
+                    // es para cuando también hay una implementación web en JS, que acá no aplica
+                    // y no existe como método en el puente nativo (por eso el error anterior).
+                    const PdfExport = (window.Capacitor.Plugins && window.Capacitor.Plugins.PdfExport)
+                        || (window.Capacitor.registerPlugin && window.Capacitor.registerPlugin('PdfExport'));
+                    if (!PdfExport) throw new Error('El plugin nativo PdfExport no está disponible en este puente de Capacitor.');
                     await PdfExport.saveAndShare({ data: base64Data, fileName });
                 } else {
                     pdf.save(fileName);
