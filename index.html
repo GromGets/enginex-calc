@@ -24,6 +24,8 @@
         };
     </script>
     <script src="vendor/mathjax/tex-svg.js" async></script>
+    <script src="vendor/jspdf/jspdf.umd.min.js"></script>
+    <script src="vendor/html2canvas/html2canvas.min.js"></script>
     
     <style>
         :root {
@@ -97,6 +99,14 @@
         .dim-select { width: auto !important; display: inline-block; padding: 6px 8px !important; }
         .result-table { border-collapse: collapse; margin: 0 auto; }
         .result-table td { padding: 8px 14px; border: 1px solid var(--border); font-family: 'Courier New', monospace; color: var(--emerald); text-align: center; }
+        #table-viewer-table { border-collapse: collapse; }
+        #table-viewer-table th, #table-viewer-table td { padding: 10px 16px; border: 1px solid var(--border); text-align: center; }
+        #table-viewer-table th { background: rgba(6, 182, 212, 0.08); color: var(--cyan); font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+        #table-viewer-table td { color: var(--text-main); }
+        #table-viewer-table tr:nth-child(even) td { background: rgba(255,255,255,0.02); }
+        .table-row-builder { display: flex; gap: 6px; margin-bottom: 6px; align-items: center; }
+        .table-row-builder input { flex: 1; }
+        .table-col-header-input { flex: 1; }
         .poly-root-row { display: flex; align-items: center; justify-content: space-between; background: rgba(0,0,0,0.2); padding: 10px 14px; border-radius: 6px; margin-bottom: 8px; }
 
         /* LaTeX Render Box */
@@ -233,6 +243,7 @@
                 <button class="tab-btn active" onclick="switchTab('cientifica')">Ecuaciones & Despejador</button>
                 <button class="tab-btn" onclick="switchTab('grafica')">Graficadora</button>
                 <button class="tab-btn" onclick="switchTab('calculadora')">Calculadora Científica</button>
+                <button class="tab-btn" onclick="switchTab('tablas')">Tablas de Referencia</button>
             </div>
         </div>
     </header>
@@ -652,6 +663,80 @@
             </div>
         </div>
 
+        <div id="tab-tablas" class="tab-content">
+            <div class="layout-row">
+
+                <div class="layout-col-left">
+                    <div class="card" id="table-builder-card">
+                        <div class="card-title" id="table-builder-title">Crear Nueva Tabla</div>
+                        <div class="form-group">
+                            <label for="table-group">Grupo / Categoría</label>
+                            <input type="text" id="table-group" class="input-control" list="table-group-datalist" placeholder="Ej: Transformadas y Series...">
+                            <datalist id="table-group-datalist"></datalist>
+                        </div>
+                        <div class="form-group">
+                            <label for="table-name">Nombre de la Tabla</label>
+                            <input type="text" id="table-name" class="input-control" placeholder="Ej: Tabla de Derivadas">
+                        </div>
+                        <div class="form-group">
+                            <label for="table-notes">Notas / Definiciones (Opcional, admite LaTeX con $$...$$)</label>
+                            <textarea id="table-notes" class="input-control" rows="2" placeholder="Ej: $$\frac{d}{dx}x^n = nx^{n-1}$$"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label>Columnas</label>
+                            <div style="display: flex; gap: 8px;" id="table-column-headers"></div>
+                            <div style="display: flex; gap: 8px; margin-top: 8px;">
+                                <button class="btn-action-small" onclick="setTableBuilderColumns(1)">1 columna</button>
+                                <button class="btn-action-small" onclick="setTableBuilderColumns(2)">2 columnas</button>
+                                <button class="btn-action-small" onclick="setTableBuilderColumns(3)">3 columnas</button>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Filas <span style="font-weight:400; color:var(--text-muted);">(cada celda admite texto o LaTeX con $$...$$)</span></label>
+                            <div id="table-rows-container"></div>
+                            <button class="btn btn-outline" style="margin-top: 8px;" onclick="addTableBuilderRow()">+ Agregar Fila</button>
+                        </div>
+                        <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 10px;">
+                            <button id="btn-save-table" class="btn btn-cyan" onclick="saveTable()">Guardar en la Biblioteca</button>
+                            <button id="btn-cancel-table-edit" class="btn btn-outline" style="display: none;" onclick="cancelTableEdit()">Cancelar Edición</button>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-title">Biblioteca de Tablas</div>
+                        <div class="form-group" style="margin-bottom: 12px;">
+                            <input type="text" id="table-search" class="input-control" placeholder="🔍 Buscar por nombre de tabla..." oninput="renderTableList()">
+                        </div>
+                        <div class="eq-list" id="tables-container"></div>
+                    </div>
+                </div>
+
+                <div class="layout-col-right">
+                    <div class="card" style="min-height: 400px;">
+                        <div id="table-viewer-header" style="display: none; justify-content: space-between; align-items: flex-start; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
+                            <div class="card-title cyan-border" id="table-viewer-title" style="margin-bottom: 0;">Tabla</div>
+                            <div style="display: flex; gap: 8px;">
+                                <button class="btn-action-small" onclick="exportTableToPDF()" title="Exportar a PDF">📄 PDF</button>
+                                <button class="btn-action-small" onclick="editCurrentTable()" title="Editar esta tabla">✏️ Editar</button>
+                            </div>
+                        </div>
+                        <div class="card-title cyan-border" id="table-viewer-placeholder-title">Seleccioná una tabla de la biblioteca</div>
+
+                        <div id="table-viewer-content" style="display: none;">
+                            <div id="table-viewer-notes" class="latex-rendered" style="display: none; flex-direction: column; align-items: flex-start; text-align: left; font-size: 15px; padding: 16px; margin-bottom: 18px;"></div>
+                            <div style="overflow-x: auto;">
+                                <table class="result-table" id="table-viewer-table" style="width: 100%;"></table>
+                            </div>
+                        </div>
+                        <div id="table-viewer-placeholder" style="text-align: center; padding-top: 100px; color: var(--text-muted);">
+                            <p>Explorá la biblioteca a la izquierda para ver una tabla, o creá la tuya.</p>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
     </div>
 
     <script>
@@ -681,6 +766,179 @@
                 { name: "Teorema de Pitágoras", formula: "$$c = \\sqrt{a^2 + b^2}$$", solveFormula: "c = sqrt(a**2 + b**2)" },
                 { name: "Ecuación Cuadrática", formula: "$$x = \\frac{-b + \\sqrt{b^2 - 4ac}}{2a}$$", solveFormula: "x = (-b + sqrt(b**2 - 4*a*c)) / (2*a)", comment: "Atención: Esta fórmula calcula matemáticamente solo una de las raíces (+). Para la raíz negativa, edita la fórmula manualmente y guárdala como copia." },
                 { name: "Logaritmo Base 10", formula: "$$y = \\frac{\\log(x)}{\\log(10)}$$", solveFormula: "y = log(x) / log(10)" }
+            ]
+        };
+
+        // Tablas de referencia predeterminadas (transcriptas de la hoja de fórmulas SEyS v3.3)
+        const defaultTablesLibrary = {
+            "Transformadas y Series": [
+                {
+                    name: "Serie de Fourier",
+                    columns: ["Función", "Transformada"],
+                    notes: "$$x(t) \\text{ periódica, período } T \\text{ (para cualquier } t_0\\text{)}$$$$X[k] = \\frac{1}{T}\\int_{t_0}^{t_0+T} x(t)e^{-jk\\frac{2\\pi}{T}t}dt \\qquad x(t) = \\sum_{k=-\\infty}^{+\\infty} X[k]e^{jk\\frac{2\\pi}{T}t}$$$$\\frac{1}{T}\\int_{t_0}^{t_0+T} x(t)y^*(t)dt = \\sum_{k=-\\infty}^{\\infty} X[k]Y^*[k] \\quad \\text{(Parseval)}$$$$\\text{Im}[x(t)]=0 \\Leftrightarrow X[-k]=X^*[k] \\qquad x(-t)=x^*(t) \\Leftrightarrow \\text{Im}[X[k]]=0$$$$\\text{Re}[x(t)]=0 \\Leftrightarrow X[-k]=-X^*[k] \\qquad x(-t)=-x^*(t) \\Leftrightarrow \\text{Re}[X[k]]=0$$",
+                    rows: [
+                        ["$$ax(t)+by(t)$$", "$$aX[k]+bY[k]$$"],
+                        ["$$x(t-\\tau)$$", "$$e^{-jk\\frac{2\\pi}{T}\\tau}X[k]$$"],
+                        ["$$e^{j2\\pi mt/T}x(t)$$", "$$X[k-m]$$"],
+                        ["$$\\frac{1}{T}\\int_0^T x(t-\\tau)y(\\tau)d\\tau$$", "$$X[k]Y[k]$$"],
+                        ["$$x(t)y(t)$$", "$$X[k]*Y[k]$$"],
+                        ["$$\\sum_n \\Pi\\left(\\frac{t-nT}{\\tau}\\right)$$", "$$\\frac{\\tau}{T}\\text{sinc}(k\\tau/T)$$"]
+                    ]
+                },
+                {
+                    name: "Transformada de Fourier",
+                    columns: ["Función", "Transformada"],
+                    notes: "$$X(j\\omega) = \\int_{-\\infty}^{\\infty} x(t)e^{-j\\omega t}dt \\qquad x(t) = \\frac{1}{2\\pi}\\int_{-\\infty}^{\\infty} X(j\\omega)e^{j\\omega t}d\\omega$$$$\\int_{-\\infty}^{\\infty} x(t)y^*(t)dt = \\frac{1}{2\\pi}\\int_{-\\infty}^{\\infty} X(j\\omega)Y^*(j\\omega)d\\omega \\quad \\text{(Parseval)}$$$$\\text{Im}[x(t)]=0 \\Leftrightarrow X(j\\omega)=X^*(-j\\omega) \\qquad x(-t)=x^*(t) \\Leftrightarrow \\text{Im}[X(j\\omega)]=0$$$$\\text{Re}[x(t)]=0 \\Leftrightarrow X(-j\\omega)=-X^*(j\\omega) \\qquad x(-t)=-x^*(t) \\Leftrightarrow \\text{Re}[X(j\\omega)]=0$$",
+                    rows: [
+                        ["$$ax(t)+by(t)$$", "$$aX(j\\omega)+bY(j\\omega)$$"],
+                        ["$$(x*y)(t)$$", "$$X(j\\omega)Y(j\\omega)$$"],
+                        ["$$x(t)y(t)$$", "$$\\frac{1}{2\\pi}(X*Y)(j\\omega)$$"],
+                        ["$$x^*(t)$$", "$$X^*(-j\\omega)$$"],
+                        ["$$X(t)$$", "$$2\\pi x(-j\\omega)$$"],
+                        ["$$x(t-t_d)$$", "$$X(j\\omega)e^{-j\\omega t_d}$$"],
+                        ["$$x(t)e^{j(\\omega_c t+\\phi)}$$", "$$X(j(\\omega-\\omega_c))e^{j\\phi}$$"],
+                        ["$$x(t)\\cos(\\omega_c t)$$", "$$\\frac{1}{2}\\left(X(j(\\omega-\\omega_c))+X(j(\\omega+\\omega_c))\\right)$$"],
+                        ["$$x(\\alpha t)$$", "$$\\frac{1}{|\\alpha|}X\\left(\\frac{j\\omega}{\\alpha}\\right)$$"],
+                        ["$$\\frac{d^n x(t)}{dt^n}$$", "$$(j\\omega)^n X(j\\omega)$$"],
+                        ["$$\\int_{-\\infty}^t x(\\lambda)d\\lambda$$", "$$\\frac{1}{j\\omega}X(j\\omega) + \\pi X(0)\\delta(\\omega)$$"],
+                        ["$$t^n x(t)$$", "$$j^n \\frac{d^n X(j\\omega)}{d\\omega^n}$$"],
+                        ["$$\\delta(t-t_d)$$", "$$e^{-j\\omega t_d}$$"],
+                        ["$$e^{j(\\omega_c t+\\phi)}$$", "$$2\\pi e^{j\\phi}\\delta(\\omega-\\omega_c)$$"],
+                        ["$$e^{-\\pi(at)^2}$$", "$$\\frac{1}{a}e^{-\\pi(\\omega/a)^2}$$"],
+                        ["$$\\sum_{k=-\\infty}^{\\infty}\\delta(t-kT)$$", "$$\\frac{2\\pi}{T}\\sum_{k=-\\infty}^{\\infty}\\delta\\left(\\omega-\\frac{2\\pi k}{T}\\right)$$"],
+                        ["$$\\text{sign}(t)$$", "$$\\frac{2}{j\\omega}$$"],
+                        ["$$u(t)$$", "$$\\frac{1}{j\\omega}+\\pi\\delta(\\omega)$$"],
+                        ["$$\\Pi(t/\\tau)$$", "$$\\tau\\,\\text{sinc}(\\omega\\tau/2\\pi)$$"],
+                        ["$$\\Lambda(t/\\tau)$$", "$$\\tau\\,\\text{sinc}^2(\\omega\\tau/2\\pi)$$"],
+                        ["$$(W/\\pi)\\text{sinc}(Wt/\\pi)$$", "$$\\Pi(\\omega/2W)$$"]
+                    ]
+                },
+                {
+                    name: "DTFT",
+                    columns: ["Función", "Transformada"],
+                    notes: "$$X(e^{j\\theta}) = \\sum_{n=-\\infty}^{+\\infty} x[n]e^{-jn\\theta} \\qquad x[n] = \\frac{1}{2\\pi}\\int_{-\\pi}^{\\pi} X(e^{j\\theta})e^{j\\theta n}d\\theta$$$$\\sum_{n=-\\infty}^{+\\infty} x_1[n]x_2^*[n] = \\frac{1}{2\\pi}\\int_{-\\pi}^{\\pi} X_1(e^{j\\theta})X_2^*(e^{j\\theta})d\\theta$$$$\\text{Im}[x[n]]=0 \\Leftrightarrow X(e^{-j\\theta})=X^*(e^{j\\theta}) \\qquad x[-n]=x^*[n] \\Leftrightarrow \\text{Im}[X(e^{j\\theta})]=0$$$$\\text{Re}[x[n]]=0 \\Leftrightarrow X(e^{-j\\theta})=-X^*(e^{j\\theta}) \\qquad x[-n]=-x^*[n] \\Leftrightarrow \\text{Re}[X(e^{j\\theta})]=0$$",
+                    rows: [
+                        ["$$a_1x[n]+a_2y[n]$$", "$$a_1X(e^{j\\theta})+a_2Y(e^{j\\theta})$$"],
+                        ["$$(x*y)[n]$$", "$$X(e^{j\\theta})Y(e^{j\\theta})$$"],
+                        ["$$x[n]y[n]$$", "$$\\frac{1}{2\\pi}\\int_{-\\pi}^{\\pi} X(e^{j\\lambda})Y(e^{j(\\theta-\\lambda)})d\\lambda$$"],
+                        ["$$x^*[n]$$", "$$X^*(e^{-j\\theta})$$"],
+                        ["$$x[n-n_o]$$", "$$X(e^{j\\theta})e^{-jn_o\\theta}$$"],
+                        ["$$x[n]e^{jn\\theta_o}$$", "$$X(e^{j(\\theta-\\theta_o)})$$"],
+                        ["$$n\\,x[n]$$", "$$j\\frac{dX(e^{j\\theta})}{d\\theta}$$"],
+                        ["$$x[-n]$$", "$$X(e^{-j\\theta})$$"],
+                        ["$$\\delta[n]$$", "$$1$$"],
+                        ["$$\\delta[n-n_o]$$", "$$e^{-jn_o\\theta}$$"],
+                        ["$$1$$", "$$\\sum_{k=-\\infty}^{+\\infty}2\\pi\\delta(\\theta+2\\pi k)$$"],
+                        ["$$a^n u[n], \\ (|a|<1)$$", "$$\\frac{1}{1-ae^{-j\\theta}}$$"],
+                        ["$$u[n]$$", "$$\\frac{1}{1-e^{-j\\theta}}+\\sum_{k=-\\infty}^{\\infty}\\pi\\delta(\\theta+2\\pi k)$$"],
+                        ["$$(n+1)a^n u[n], \\ (|a|<1)$$", "$$\\frac{1}{(1-ae^{-j\\theta})^2}$$"],
+                        ["$$r^n\\frac{\\sin\\theta_o(n+1)}{\\sin\\theta_o}u[n], \\ (|r|<1)$$", "$$\\frac{1}{1-2r\\cos\\theta_o e^{-j\\theta}+r^2e^{-j2\\theta}}$$"],
+                        ["$$\\frac{\\sin\\theta_o n}{\\pi n}$$", "$$\\sum_k \\Pi\\left(\\frac{\\theta+2\\pi k}{2\\theta_o}\\right)$$"],
+                        ["$$x[n]=\\begin{cases}1 & 0\\le n\\le M\\\\0 & \\text{otro } n\\end{cases}$$", "$$\\frac{\\sin(\\theta(M+1)/2)}{\\sin(\\theta/2)}e^{-j\\theta M/2}$$"],
+                        ["$$e^{j\\theta_o n+\\phi}$$", "$$\\sum_{k=-\\infty}^{\\infty}2\\pi e^{j\\phi}\\delta(\\theta-\\theta_o+2\\pi k)$$"]
+                    ]
+                },
+                {
+                    name: "DFT",
+                    columns: ["Función", "Transformada"],
+                    notes: "$$X[k] = \\sum_{n=0}^{N-1} x[n]W_N^{kn} \\qquad x[n] = \\frac{1}{N}\\sum_{k=0}^{N-1} X[k]W_N^{-kn} \\qquad \\text{donde } W_N=e^{-j2\\pi/N}$$$$\\sum_{n=0}^{N-1} x[n]y^*[n] = \\frac{1}{N}\\sum_{k=0}^{N-1} X[k]Y^*[k]$$$$\\text{Im}[x[n]]=0 \\Leftrightarrow X[-n \\bmod N]=X^*[k] \\qquad x[-n \\bmod N]=x^*[n] \\Leftrightarrow \\text{Im}[X[k]]=0$$$$\\text{Re}[x[n]]=0 \\Leftrightarrow X[-n \\bmod N]=-X^*[k] \\qquad x[-n \\bmod N]=-x^*[n] \\Leftrightarrow \\text{Re}[X[k]]=0$$",
+                    rows: [
+                        ["$$ax[n]+by[n]$$", "$$aX[k]+bY[k]$$"],
+                        ["$$X[n]$$", "$$N x[-k \\bmod N]$$"],
+                        ["$$x[(n-m) \\bmod N]$$", "$$W_N^{km}X[k]$$"],
+                        ["$$W_N^{-ln}x[n]$$", "$$X[(k-l) \\bmod N]$$"],
+                        ["$$\\sum_{m=0}^{N-1} x[m]y[(n-m)\\bmod N]$$", "$$X[k]Y[k]$$"],
+                        ["$$x[n]y[n]$$", "$$\\frac{1}{N}\\sum_{l=0}^{N-1} X[l]Y[(k-l)\\bmod N]$$"],
+                        ["$$x^*[n]$$", "$$X^*[-k \\bmod N]$$"],
+                        ["$$x^*[-n \\bmod N]$$", "$$X^*[k]$$"]
+                    ]
+                },
+                {
+                    name: "Transformada de Laplace",
+                    columns: ["Función", "Transformada", "ROC"],
+                    notes: "$$X(s) = \\int_{-\\infty}^{\\infty} x(t)e^{-st}dt \\qquad x(t) = \\sum_{Polos} \\text{Res}[X(s)e^{st}]$$$$\\text{(la suma se realiza en todos los polos a la izquierda de la ROC)}$$$$\\textbf{Unilateral: } X(s)=\\int_{0^-}^{\\infty} x(t)e^{-st}dt, \\text{ con } x(t)=y(t)=0 \\ \\forall t<0$$$$\\frac{d^n x(t)}{dt^n} \\leftrightarrow s^nX(s) - \\sum_{k=0}^{n-1} s^k \\left.\\frac{d^{n-1-k}x(t)}{dt^{n-1-k}}\\right|_{t=0^-}$$$$\\text{TVI: } x(0^+)=\\lim_{s\\to\\infty} sX(s) \\qquad \\text{TVF: } \\lim_{t\\to\\infty} x(t)=\\lim_{s\\to 0} sX(s)$$$$\\text{(válidos si } x(t) \\text{ no tiene impulsos/singularidades en } t=0\\text{; TVF requiere sin polos en el semiplano derecho)}$$",
+                    rows: [
+                        ["$$ax(t)+by(t)$$", "$$aX(s)+bY(s)$$", "$$\\text{contiene } R_x\\cap R_y$$"],
+                        ["$$(x*y)(t)$$", "$$X(s)Y(s)$$", "$$\\text{contiene } R_x\\cap R_y$$"],
+                        ["$$x(t)y(t)$$", "$$(X*Y)(s)$$", "$$\\text{contiene } R_x\\cap R_y$$"],
+                        ["$$x^*(t)$$", "$$X^*(s^*)$$", "$$R_x$$"],
+                        ["$$x(t-t_d)$$", "$$X(s)e^{-st_d}$$", "$$R_x$$"],
+                        ["$$x(t)e^{s_0t}$$", "$$X(s-s_0)$$", "$$R_x+\\text{Re}\\{s_0\\}$$"],
+                        ["$$x(\\alpha t)$$", "$$\\frac{1}{|\\alpha|}X\\left(\\frac{s}{\\alpha}\\right)$$", "$$\\alpha R_x$$"],
+                        ["$$\\frac{d^n x(t)}{dt^n}$$", "$$s^n X(s)$$", "$$R_x$$"],
+                        ["$$\\int_{-\\infty}^t x(\\lambda)d\\lambda$$", "$$s^{-1}X(s)$$", "$$R_x\\cap\\{\\text{Re}[s]>0\\}$$"],
+                        ["$$t^n x(t)$$", "$$(-1)^n\\frac{d^n X(s)}{ds^n}$$", "$$R_x$$"],
+                        ["$$\\delta(t-t_d)$$", "$$e^{-st_d}$$", "$$\\forall s$$"],
+                        ["$$u(t)$$", "$$1/s$$", "$$\\text{Re}[s]>0$$"],
+                        ["$$-u(-t)$$", "$$1/s$$", "$$\\text{Re}[s]<0$$"],
+                        ["$$\\frac{t^{n-1}}{(n-1)!}u(t)$$", "$$1/s^n$$", "$$\\text{Re}[s]>0$$"],
+                        ["$$-\\frac{t^{n-1}}{(n-1)!}u(-t)$$", "$$1/s^n$$", "$$\\text{Re}[s]<0$$"],
+                        ["$$e^{-at}u(t)$$", "$$1/(s+a)$$", "$$\\text{Re}[s]>-\\text{Re}[a]$$"],
+                        ["$$-e^{-at}u(-t)$$", "$$1/(s+a)$$", "$$\\text{Re}[s]<-\\text{Re}[a]$$"],
+                        ["$$\\frac{t^{n-1}}{(n-1)!}e^{-at}u(t)$$", "$$1/(s+a)^n$$", "$$\\text{Re}[s]>-\\text{Re}[a]$$"],
+                        ["$$e^{-at}\\cos(\\omega_0t)u(t)$$", "$$\\frac{s+a}{(s+a)^2+\\omega_0^2}$$", "$$\\text{Re}[s]>-\\text{Re}[a]$$"],
+                        ["$$e^{-at}\\sin(\\omega_0t)u(t)$$", "$$\\frac{\\omega_0}{(s+a)^2+\\omega_0^2}$$", "$$\\text{Re}[s]>-\\text{Re}[a]$$"],
+                        ["$$u_n(t)=\\frac{d^n\\delta(t)}{dt^n}$$", "$$s^n$$", "$$\\forall s$$"]
+                    ]
+                },
+                {
+                    name: "Transformada Z",
+                    columns: ["Secuencia", "Transformada Z", "ROC"],
+                    notes: "$$X(z) = \\sum_{n=-\\infty}^{+\\infty} x[n]z^{-n} \\qquad x[n] = \\frac{1}{2\\pi j}\\oint_C X(z)z^{n-1}dz$$$$\\text{(}C\\text{ antihoraria en la ROC, envuelve al origen)}$$$$\\textbf{Unilateral: } X(z)=\\sum_{n=0}^{+\\infty} x[n]z^{-n}$$$$x[n+n_o] \\leftrightarrow z^{n_o}X_u(z) - x[0]z^{n_o} - \\cdots - x[n_o-1]z$$$$x[n-n_o] \\leftrightarrow z^{-n_o}X_u(z) + x[-1]z^{-n_o+1} + \\cdots + x[-n_o]$$$$\\text{TVI: } x[0] = \\lim_{z\\to\\infty} X(z)$$",
+                    rows: [
+                        ["$$ax[n]+by[n]$$", "$$aX(z)+bY(z)$$", "$$\\text{contiene } R_x\\cap R_y$$"],
+                        ["$$x[n-n_o]$$", "$$z^{-n_o}X(z)$$", "$$R_x, \\text{quizás} \\pm 0 \\text{ o } \\infty$$"],
+                        ["$$z_o^n x[n]$$", "$$X(z/z_o)$$", "$$|z_o|R_x$$"],
+                        ["$$n^k x[n]$$", "$$\\left(-z\\frac{d}{dz}\\right)^k X(z)$$", "$$R_x, \\text{quizás} \\pm 0 \\text{ o } \\infty$$"],
+                        ["$$x^*[n]$$", "$$X^*(z^*)$$", "$$R_x$$"],
+                        ["$$x[-n]$$", "$$X(1/z)$$", "$$1/R_x$$"],
+                        ["$$(x*y)[n]$$", "$$X(z)Y(z)$$", "$$\\text{contiene } R_x\\cap R_y$$"],
+                        ["$$\\delta[n]$$", "$$1$$", "$$\\forall z$$"],
+                        ["$$a^n u[n]$$", "$$\\frac{1}{1-az^{-1}}$$", "$$|z|>|a|$$"],
+                        ["$$-a^n u[-n-1]$$", "$$\\frac{1}{1-az^{-1}}$$", "$$|z|<|a|$$"],
+                        ["$$\\delta[n-n_o]$$", "$$z^{-n_o}$$", "$$\\forall z \\text{ excepto } 0 \\text{ o } \\infty$$"],
+                        ["$$\\cos(\\omega_o n)u[n]$$", "$$\\frac{1-z^{-1}\\cos\\omega_o}{1-2z^{-1}\\cos\\omega_o+z^{-2}}$$", "$$|z|>1$$"],
+                        ["$$\\sin(\\omega_o n)u[n]$$", "$$\\frac{z^{-1}\\sin\\omega_o}{1-2z^{-1}\\cos\\omega_o+z^{-2}}$$", "$$|z|>1$$"]
+                    ]
+                }
+            ],
+            "Identidades y Fórmulas": [
+                {
+                    name: "Identidades Trigonométricas",
+                    columns: ["Identidad"],
+                    rows: [
+                        ["$$e^{j\\theta} = \\cos\\theta + j\\sin\\theta$$"],
+                        ["$$\\cos\\theta = \\tfrac{1}{2}(e^{j\\theta}+e^{-j\\theta})$$"],
+                        ["$$\\sin\\theta = \\tfrac{1}{2j}(e^{j\\theta}-e^{-j\\theta})$$"],
+                        ["$$\\cos\\theta = \\sin(\\theta+90^\\circ)$$"],
+                        ["$$\\sin\\theta = \\cos(\\theta-90^\\circ)$$"],
+                        ["$$\\sin^2\\theta+\\cos^2\\theta=1$$"],
+                        ["$$\\cos^2\\theta = \\tfrac{1}{2}(1+\\cos2\\theta)$$"],
+                        ["$$\\cos^3\\theta = \\tfrac{1}{4}(3\\cos\\theta+\\cos3\\theta)$$"],
+                        ["$$\\sin^2\\theta = \\tfrac{1}{2}(1-\\cos2\\theta)$$"],
+                        ["$$\\sin^3\\theta = \\tfrac{1}{4}(3\\sin\\theta-\\sin3\\theta)$$"],
+                        ["$$\\sin(\\alpha\\pm\\beta) = \\sin\\alpha\\cos\\beta \\pm \\cos\\alpha\\sin\\beta$$"],
+                        ["$$\\cos(\\alpha\\pm\\beta) = \\cos\\alpha\\cos\\beta \\mp \\sin\\alpha\\sin\\beta$$"],
+                        ["$$\\tan(\\alpha\\pm\\beta) = \\dfrac{\\tan\\alpha\\pm\\tan\\beta}{1\\mp\\tan\\alpha\\tan\\beta}$$"],
+                        ["$$\\sin\\alpha\\sin\\beta = \\tfrac{1}{2}\\cos(\\alpha-\\beta) - \\tfrac{1}{2}\\cos(\\alpha+\\beta)$$"],
+                        ["$$\\cos\\alpha\\cos\\beta = \\tfrac{1}{2}\\cos(\\alpha-\\beta) + \\tfrac{1}{2}\\cos(\\alpha+\\beta)$$"],
+                        ["$$\\sin\\alpha\\cos\\beta = \\tfrac{1}{2}\\sin(\\alpha-\\beta) + \\tfrac{1}{2}\\sin(\\alpha+\\beta)$$"]
+                    ]
+                },
+                {
+                    name: "Funciones y Fórmulas Útiles",
+                    columns: ["Descripción", "Fórmula"],
+                    rows: [
+                        ["sinc(t)", "$$\\text{sinc}\\,t = \\dfrac{\\sin\\pi t}{\\pi t}$$"],
+                        ["sign(t)", "$$\\text{sign}\\,t = \\begin{cases}1, & t>0\\\\-1, & t<0\\end{cases}$$"],
+                        ["u(t)", "$$u(t) = \\begin{cases}1, & t>0\\\\0, & t<0\\end{cases}$$"],
+                        ["u[n]", "$$u[n] = \\begin{cases}1, & n\\ge 0\\\\0, & n<0\\end{cases}$$"],
+                        ["Pulso rectangular", "$$\\Pi\\left(\\frac{t}{\\tau}\\right) = \\begin{cases}1, & |t|<\\tau/2\\\\0, & |t|>\\tau/2\\end{cases}$$"],
+                        ["Pulso triangular", "$$\\Lambda\\left(\\frac{t}{\\tau}\\right) = \\begin{cases}1-\\dfrac{|t|}{\\tau}, & |t|<\\tau\\\\0, & |t|>\\tau\\end{cases}$$"],
+                        ["Fórmula de Poisson", "$$\\sum_{k=-\\infty}^{+\\infty} e^{-jk\\alpha t} = \\frac{2\\pi}{\\alpha}\\sum_{k=-\\infty}^{+\\infty}\\delta\\left(t-k\\frac{2\\pi}{\\alpha}\\right)$$"],
+                        ["Serie Geométrica", "$$\\sum_{k=N_1}^{N_2} \\alpha^k = \\frac{\\alpha^{N_1}-\\alpha^{N_2+1}}{1-\\alpha}, \\quad N_2>N_1,\\ \\alpha\\ne 1$$"]
+                    ]
+                }
             ]
         };
 
@@ -714,9 +972,11 @@
                 }
             });
             loadLibraries();
+            loadTablesLibraries();
             initGraph();
             handleGraphInputChange('graph-f1', 'f1-render');
             handleGraphInputChange('graph-f2', 'f2-render');
+            setTableBuilderColumns(2);
             document.getElementById('copyright-year').innerText = new Date().getFullYear();
             document.getElementById('installed-version-label').innerText = APP_VERSION;
         };
@@ -727,7 +987,7 @@
         // abre el navegador del sistema para descargar el APK del release. Instalarlo sigue
         // requiriendo el toque manual de "instalar" (Android lo exige por seguridad), pero evita
         // tener que pedirme el archivo cada vez.
-        const APP_VERSION = '1.2.1';
+        const APP_VERSION = '1.3.0';
         const UPDATE_REPO = 'GromGets/enginex-calc';
 
         function compareVersions(a, b) {
@@ -2495,6 +2755,312 @@
             if (isTap) { tapStartPos = { x: clientX, y: clientY }; }
             plot();
             drawValueMarkersAt(sx, xm, xMin, xMax, yMin, yMax);
+        }
+
+        // --- TABLAS DE REFERENCIA ---
+        let tablesLibrary = {};
+        let customTables = [];
+        let currentSelectedTable = null;
+        let editingTableId = null;
+        let editingTableIsCustom = false;
+        let editingTableOldGroup = "";
+        let tableBuilderColumnCount = 2;
+
+        function typesetElement(el) {
+            whenMathJaxReady().then(() => {
+                try { MathJax.typesetClear([el]); } catch (e) {}
+                MathJax.typesetPromise([el]).catch(() => {});
+            });
+        }
+
+        function loadTablesLibraries() {
+            const storedSys = localStorage.getItem('enginex_v11_tables_sys');
+            if (storedSys) { try { tablesLibrary = JSON.parse(storedSys); } catch (e) { initSystemTablesLibrary(); } }
+            else { initSystemTablesLibrary(); }
+
+            const storedUsr = localStorage.getItem('enginex_v11_tables_usr');
+            if (storedUsr) { try { customTables = JSON.parse(storedUsr); } catch (e) { customTables = []; } }
+
+            renderTableList();
+            updateTableGroupDatalist();
+        }
+
+        function initSystemTablesLibrary() {
+            tablesLibrary = JSON.parse(JSON.stringify(defaultTablesLibrary));
+            for (let group in tablesLibrary) {
+                tablesLibrary[group].forEach(t => {
+                    t.id = 'sys_table_' + Math.random().toString(36).substr(2, 9);
+                    t.isCustom = false;
+                    if (!t.notes) t.notes = "";
+                });
+            }
+            saveSystemTablesLibrary();
+        }
+
+        function saveSystemTablesLibrary() { localStorage.setItem('enginex_v11_tables_sys', JSON.stringify(tablesLibrary)); }
+
+        function updateTableGroupDatalist() {
+            const dl = document.getElementById('table-group-datalist');
+            const sets = new Set(Object.keys(tablesLibrary));
+            customTables.forEach(t => sets.add(t.group));
+            dl.innerHTML = '';
+            sets.forEach(s => { let op = document.createElement('option'); op.value = s; dl.appendChild(op); });
+        }
+
+        function renderTableList() {
+            const container = document.getElementById('tables-container');
+            const searchInput = document.getElementById('table-search');
+            const searchQuery = searchInput ? searchInput.value.trim().toLowerCase() : '';
+            container.innerHTML = '';
+            const masterMap = {};
+
+            for (const [gName, list] of Object.entries(tablesLibrary)) { masterMap[gName] = list.map(item => ({ ...item, group: gName })); }
+            customTables.forEach(t => { if (!masterMap[t.group]) masterMap[t.group] = []; masterMap[t.group].push(t); });
+
+            for (const [groupName, items] of Object.entries(masterMap)) {
+                const filteredItems = items.filter(t => t.name.toLowerCase().includes(searchQuery));
+                if (filteredItems.length === 0) continue;
+
+                const details = document.createElement('details'); details.className = 'group-details';
+                let hasActive = false;
+                const summary = document.createElement('summary'); summary.innerHTML = `&#9662; ${groupName} (${filteredItems.length})`;
+                details.appendChild(summary);
+
+                filteredItems.forEach(t => {
+                    const isSel = currentSelectedTable && currentSelectedTable.id === t.id;
+                    if (isSel) hasActive = true;
+
+                    const div = document.createElement('div'); div.className = `eq-item ${isSel ? 'selected' : ''}`; div.onclick = () => selectTable(t);
+                    const badge = t.isCustom ? `<span class="badge badge-usr">USR</span>` : `<span class="badge badge-sys">SYS</span>`;
+                    const del = `<button class="delete-eq-btn" onclick="deleteTable('${t.id}', event)">Eliminar</button>`;
+
+                    div.innerHTML = `
+                        <div class="eq-item-name">${badge} ${t.name}</div>
+                        <div class="eq-item-latex">${t.columns.length} columna${t.columns.length === 1 ? '' : 's'} · ${t.rows.length} fila${t.rows.length === 1 ? '' : 's'}</div>
+                        ${del}
+                    `;
+                    details.appendChild(div);
+                });
+                if (hasActive || searchQuery !== '') details.open = true;
+                container.appendChild(details);
+            }
+            if (container.innerHTML === '' && searchQuery !== '') {
+                container.innerHTML = `<div style="padding: 20px 10px; text-align: center; color: var(--text-muted); font-size: 13px;">No se encontraron tablas que contengan "${searchQuery}"</div>`;
+            }
+        }
+
+        function selectTable(table) {
+            currentSelectedTable = table;
+            renderTableList();
+
+            document.getElementById('table-viewer-placeholder').style.display = 'none';
+            document.getElementById('table-viewer-placeholder-title').style.display = 'none';
+            document.getElementById('table-viewer-header').style.display = 'flex';
+            document.getElementById('table-viewer-content').style.display = 'block';
+            document.getElementById('table-viewer-title').innerText = `${table.group} ➝ ${table.name}`;
+
+            const notesEl = document.getElementById('table-viewer-notes');
+            if (table.notes && table.notes.trim()) {
+                notesEl.style.display = 'flex';
+                notesEl.innerHTML = table.notes;
+            } else {
+                notesEl.style.display = 'none';
+                notesEl.innerHTML = '';
+            }
+
+            const tableEl = document.getElementById('table-viewer-table');
+            let html = '<thead><tr>' + table.columns.map(c => `<th>${c}</th>`).join('') + '</tr></thead><tbody>';
+            table.rows.forEach(row => {
+                html += '<tr>' + row.map(cell => `<td>${cell}</td>`).join('') + '</tr>';
+            });
+            html += '</tbody>';
+            tableEl.innerHTML = html;
+
+            typesetElement(document.getElementById('table-viewer-content'));
+        }
+
+        function setTableBuilderColumns(n) {
+            tableBuilderColumnCount = n;
+            const headerContainer = document.getElementById('table-column-headers');
+            headerContainer.innerHTML = '';
+            for (let i = 0; i < n; i++) {
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.className = 'input-control table-col-header-input';
+                input.placeholder = `Encabezado ${i + 1}`;
+                input.id = `table-col-header-${i}`;
+                headerContainer.appendChild(input);
+            }
+            document.getElementById('table-rows-container').innerHTML = '';
+        }
+
+        function addTableBuilderRow() {
+            const container = document.getElementById('table-rows-container');
+            const row = document.createElement('div');
+            row.className = 'table-row-builder';
+            for (let i = 0; i < tableBuilderColumnCount; i++) {
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.className = 'input-control';
+                input.placeholder = `Celda ${i + 1}`;
+                row.appendChild(input);
+            }
+            const delBtn = document.createElement('button');
+            delBtn.className = 'delete-eq-btn';
+            delBtn.style.cssText = 'position: static; opacity: 1;';
+            delBtn.innerText = '❌';
+            delBtn.onclick = () => row.remove();
+            row.appendChild(delBtn);
+            container.appendChild(row);
+        }
+
+        function saveTable() {
+            let group = document.getElementById('table-group').value.trim();
+            const name = document.getElementById('table-name').value.trim();
+            const notes = document.getElementById('table-notes').value.trim();
+            if (!group) group = "Mis Tablas";
+            if (!name) { alert('Es necesario ponerle un nombre a la tabla.'); return; }
+
+            const columns = [];
+            for (let i = 0; i < tableBuilderColumnCount; i++) {
+                const headerInput = document.getElementById(`table-col-header-${i}`);
+                columns.push((headerInput && headerInput.value.trim()) || `Columna ${i + 1}`);
+            }
+
+            const rowDivs = document.querySelectorAll('#table-rows-container .table-row-builder');
+            if (rowDivs.length === 0) { alert('Agregá al menos una fila.'); return; }
+            const rows = [];
+            rowDivs.forEach(rowDiv => {
+                const inputs = rowDiv.querySelectorAll('input');
+                const rowData = Array.from(inputs).map(inp => inp.value.trim());
+                if (rowData.every(c => c === '')) return;
+                rows.push(rowData);
+            });
+            if (rows.length === 0) { alert('Agregá al menos una fila con contenido.'); return; }
+
+            if (editingTableId) {
+                if (editingTableIsCustom) {
+                    let idx = customTables.findIndex(t => t.id.toString() === editingTableId.toString());
+                    if (idx > -1) {
+                        customTables[idx].group = group; customTables[idx].name = name;
+                        customTables[idx].notes = notes; customTables[idx].columns = columns; customTables[idx].rows = rows;
+                    }
+                    localStorage.setItem('enginex_v11_tables_usr', JSON.stringify(customTables));
+                } else {
+                    if (tablesLibrary[editingTableOldGroup]) {
+                        tablesLibrary[editingTableOldGroup] = tablesLibrary[editingTableOldGroup].filter(t => t.id.toString() !== editingTableId.toString());
+                        if (tablesLibrary[editingTableOldGroup].length === 0) delete tablesLibrary[editingTableOldGroup];
+                    }
+                    if (!tablesLibrary[group]) tablesLibrary[group] = [];
+                    tablesLibrary[group].push({ id: editingTableId, group, name, notes, columns, rows, isCustom: false });
+                    saveSystemTablesLibrary();
+                }
+                let targetId = editingTableId;
+                cancelTableEdit();
+                loadTablesLibraries();
+                let allTables = customTables.slice();
+                Object.values(tablesLibrary).forEach(arr => allTables = allTables.concat(arr));
+                let saved = allTables.find(t => t.id.toString() === targetId.toString());
+                if (saved) selectTable(saved);
+            } else {
+                const newObj = { group, name, notes, columns, rows, isCustom: true, id: Date.now() };
+                customTables.push(newObj);
+                localStorage.setItem('enginex_v11_tables_usr', JSON.stringify(customTables));
+                cancelTableEdit();
+                loadTablesLibraries();
+                selectTable(newObj);
+            }
+        }
+
+        function editCurrentTable() {
+            if (!currentSelectedTable) return;
+            document.getElementById('table-group').value = currentSelectedTable.group || "";
+            document.getElementById('table-name').value = currentSelectedTable.name || "";
+            document.getElementById('table-notes').value = currentSelectedTable.notes || "";
+
+            setTableBuilderColumns(currentSelectedTable.columns.length);
+            currentSelectedTable.columns.forEach((c, i) => { document.getElementById(`table-col-header-${i}`).value = c; });
+            currentSelectedTable.rows.forEach(row => {
+                addTableBuilderRow();
+                const rowDivs = document.querySelectorAll('#table-rows-container .table-row-builder');
+                const lastRow = rowDivs[rowDivs.length - 1];
+                const inputs = lastRow.querySelectorAll('input');
+                row.forEach((cell, i) => { if (inputs[i]) inputs[i].value = cell; });
+            });
+
+            editingTableId = currentSelectedTable.id;
+            editingTableIsCustom = currentSelectedTable.isCustom;
+            editingTableOldGroup = currentSelectedTable.group;
+
+            document.getElementById('table-builder-title').innerText = "Editando Tabla";
+            document.getElementById('btn-save-table').innerText = "Actualizar Tabla";
+            document.getElementById('btn-cancel-table-edit').style.display = "block";
+            document.querySelector('#tab-tablas .layout-col-left').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function cancelTableEdit() {
+            editingTableId = null;
+            document.getElementById('table-group').value = '';
+            document.getElementById('table-name').value = '';
+            document.getElementById('table-notes').value = '';
+            setTableBuilderColumns(2);
+            document.getElementById('table-builder-title').innerText = "Crear Nueva Tabla";
+            document.getElementById('btn-save-table').innerText = "Guardar en la Biblioteca";
+            document.getElementById('btn-cancel-table-edit').style.display = "none";
+        }
+
+        function deleteTable(id, e) {
+            e.stopPropagation();
+            if (!confirm("¿Estás seguro de eliminar esta tabla? Esta acción no se puede deshacer.")) return;
+            const strId = id.toString();
+            if (strId.startsWith('sys_table_')) {
+                for (let group in tablesLibrary) {
+                    tablesLibrary[group] = tablesLibrary[group].filter(t => t.id.toString() !== strId);
+                    if (tablesLibrary[group].length === 0) delete tablesLibrary[group];
+                }
+                saveSystemTablesLibrary();
+            } else {
+                customTables = customTables.filter(t => t.id.toString() !== strId);
+                localStorage.setItem('enginex_v11_tables_usr', JSON.stringify(customTables));
+            }
+
+            if (currentSelectedTable && currentSelectedTable.id.toString() === strId) {
+                currentSelectedTable = null;
+                document.getElementById('table-viewer-content').style.display = 'none';
+                document.getElementById('table-viewer-header').style.display = 'none';
+                document.getElementById('table-viewer-placeholder').style.display = 'block';
+                document.getElementById('table-viewer-placeholder-title').style.display = 'block';
+            }
+            loadTablesLibraries();
+        }
+
+        async function exportTableToPDF() {
+            if (!currentSelectedTable) return;
+            const btn = event.currentTarget;
+            const originalText = btn.innerText;
+            btn.innerText = '⏳...';
+            btn.disabled = true;
+            try {
+                const el = document.getElementById('table-viewer-content');
+                const canvas = await html2canvas(el, { backgroundColor: '#0f172a', scale: 2 });
+                // JPEG en vez de PNG: mismo contenido pero ~65x más liviano (PNG sin comprimir
+                // daba PDFs de +20MB para una tabla, incómodo para compartir/guardar en el celular).
+                const imgData = canvas.toDataURL('image/jpeg', 0.92);
+                const { jsPDF } = window.jspdf;
+                const pdf = new jsPDF({
+                    orientation: canvas.width > canvas.height ? 'landscape' : 'portrait',
+                    unit: 'px',
+                    format: [canvas.width, canvas.height]
+                });
+                pdf.addImage(imgData, 'JPEG', 0, 0, canvas.width, canvas.height);
+                const safeName = (currentSelectedTable.name || 'tabla').replace(/[^a-z0-9áéíóúñ_\- ]/gi, '').trim() || 'tabla';
+                pdf.save(safeName + '.pdf');
+            } catch (e) {
+                alert('No se pudo generar el PDF: ' + e.message);
+            } finally {
+                btn.innerText = originalText;
+                btn.disabled = false;
+            }
         }
     </script>
 </body>
