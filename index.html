@@ -115,6 +115,19 @@
         .table-row-builder { display: flex; gap: 6px; margin-bottom: 6px; align-items: center; }
         .table-row-builder input { flex: 1; }
         .table-col-header-input { flex: 1; }
+
+        /* Plantilla oculta (fuera de pantalla, nunca display:none para que html2canvas la
+           pueda capturar) usada SOLO para generar el PDF: fondo blanco y texto oscuro, como un
+           documento imprimible normal, en vez de una captura de la UI oscura de la app. */
+        #pdf-print-template { position: fixed; left: -9999px; top: 0; width: 820px; background: #ffffff; color: #1a1a1a; padding: 40px; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        #pdf-print-template h1 { font-size: 22px; color: #0e7490; margin-bottom: 4px; border-left: 4px solid #0e7490; padding-left: 12px; }
+        #pdf-print-template .pdf-print-subtitle { font-size: 12px; color: #64748b; margin-bottom: 22px; padding-left: 16px; text-transform: uppercase; letter-spacing: 0.5px; }
+        #pdf-print-template .pdf-print-notes { font-size: 13px; line-height: 1.8; margin-bottom: 22px; padding: 16px 18px; background-color: #f8fafc; border: none; border-left: 3px solid #0891b2; border-radius: 0 6px 6px 0; color: #1a1a1a; }
+        #pdf-print-template table { border-collapse: collapse; width: 100%; }
+        #pdf-print-template th, #pdf-print-template td { border: 1px solid #cbd5e1; padding: 12px 16px; text-align: center; font-size: 14px; }
+        #pdf-print-template th { background: #ecfeff; color: #0e7490; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px; }
+        #pdf-print-template tr:nth-child(even) td { background: #f8fafc; }
+        #pdf-print-template .pdf-print-footer { margin-top: 28px; font-size: 10px; color: #94a3b8; text-align: center; }
         .poly-root-row { display: flex; align-items: center; justify-content: space-between; background: rgba(0,0,0,0.2); padding: 10px 14px; border-radius: 6px; margin-bottom: 8px; }
 
         /* LaTeX Render Box */
@@ -342,6 +355,14 @@
             <div id="poly-result-zone" style="display: none; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border);"></div>
             <button class="btn btn-outline" style="margin-top: 16px;" onclick="togglePolyModal(false)">Cerrar</button>
         </div>
+    </div>
+
+    <div id="pdf-print-template">
+        <h1 id="pdf-print-title"></h1>
+        <div class="pdf-print-subtitle" id="pdf-print-subtitle"></div>
+        <div class="pdf-print-notes latex-rendered" id="pdf-print-notes" style="display: none; flex-direction: column; align-items: flex-start; text-align: left;"></div>
+        <table id="pdf-print-table"></table>
+        <div class="pdf-print-footer" id="pdf-print-footer"></div>
     </div>
 
     <div class="main-container">
@@ -991,7 +1012,7 @@
         // abre el navegador del sistema para descargar el APK del release. Instalarlo sigue
         // requiriendo el toque manual de "instalar" (Android lo exige por seguridad), pero evita
         // tener que pedirme el archivo cada vez.
-        const APP_VERSION = '1.3.2';
+        const APP_VERSION = '1.3.3';
         const UPDATE_REPO = 'GromGets/enginex-calc';
 
         function compareVersions(a, b) {
@@ -3087,11 +3108,49 @@
             btn.innerText = '⏳...';
             btn.disabled = true;
             try {
-                const el = document.getElementById('table-viewer-content');
-                const canvas = await html2canvas(el, { backgroundColor: '#0f172a', scale: 2 });
-                // JPEG en vez de PNG: mismo contenido pero ~65x más liviano (PNG sin comprimir
-                // daba PDFs de +20MB para una tabla, incómodo para compartir/guardar en el celular).
-                const imgData = canvas.toDataURL('image/jpeg', 0.92);
+                const table = currentSelectedTable;
+
+                // Poblar la plantilla blanca oculta con los MISMOS datos LaTeX de la tabla
+                // (no una captura de lo que se ve en pantalla) — así el PDF es un documento
+                // legible en fondo blanco, no una foto oscura de la app en baja resolución.
+                document.getElementById('pdf-print-title').innerText = table.name;
+                document.getElementById('pdf-print-subtitle').innerText = table.group || '';
+
+                const notesEl = document.getElementById('pdf-print-notes');
+                if (table.notes && table.notes.trim()) {
+                    notesEl.style.display = 'flex';
+                    notesEl.innerHTML = table.notes;
+                } else {
+                    notesEl.style.display = 'none';
+                    notesEl.innerHTML = '';
+                }
+
+                const tableEl = document.getElementById('pdf-print-table');
+                let tableHtml = '<thead><tr>' + table.columns.map(c => `<th>${c}</th>`).join('') + '</tr></thead><tbody>';
+                table.rows.forEach(row => { tableHtml += '<tr>' + row.map(cell => `<td>${cell}</td>`).join('') + '</tr>'; });
+                document.getElementById('pdf-print-footer').innerText = 'EngineX Calc — ' + new Date().toLocaleDateString('es-AR');
+                tableEl.innerHTML = tableHtml + '</tbody>';
+
+                // Esperar a que MathJax termine de tipear TODO el contenido antes de capturar
+                // (si se captura antes de que renderice, sale texto crudo sin formatear).
+                const printContainer = document.getElementById('pdf-print-template');
+                await whenMathJaxReady();
+                try { MathJax.typesetClear([printContainer]); } catch (e) {}
+                await MathJax.typesetPromise([printContainer]).catch(() => {});
+
+                // MathJax agrega junto a cada fórmula un <mjx-assistive-mml> oculto (texto
+                // MathML para lectores de pantalla, escondido con clip-rect). html2canvas no
+                // respeta ese clip y lo dibuja superpuesto a la fórmula visible, lo que se
+                // veía como texto matemático "duplicado"/fantasma. Se quita antes de capturar
+                // porque no aporta nada a una captura de imagen para el PDF.
+                printContainer.querySelectorAll('mjx-assistive-mml').forEach(el => el.remove());
+
+                const canvas = await html2canvas(printContainer, { backgroundColor: '#ffffff', scale: 2 });
+                // JPEG, no PNG: para una tabla grande (ej. Laplace, 63 celdas con símbolos),
+                // el detalle del antialiasing de tanto texto matemático hacía que PNG diera
+                // PDFs de +40MB — peor que la captura oscura original. JPEG a calidad alta
+                // comprime esto a ~400-500KB sin pérdida visible de nitidez.
+                const imgData = canvas.toDataURL('image/jpeg', 0.93);
                 const { jsPDF } = window.jspdf;
                 const pdf = new jsPDF({
                     orientation: canvas.width > canvas.height ? 'landscape' : 'portrait',
@@ -3099,7 +3158,7 @@
                     format: [canvas.width, canvas.height]
                 });
                 pdf.addImage(imgData, 'JPEG', 0, 0, canvas.width, canvas.height);
-                const safeName = (currentSelectedTable.name || 'tabla').replace(/[^a-z0-9áéíóúñ_\- ]/gi, '').trim() || 'tabla';
+                const safeName = (table.name || 'tabla').replace(/[^a-z0-9áéíóúñ_\- ]/gi, '').trim() || 'tabla';
                 const fileName = safeName + '.pdf';
 
                 // El WebView de Android no soporta la descarga de blobs de pdf.save() (nada
